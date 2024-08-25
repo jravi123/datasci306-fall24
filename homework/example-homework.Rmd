@@ -1,0 +1,28 @@
+---
+title: "example-homework"
+author: "Jayashree Ravi"
+date: "2024-01-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1 (2 points)
+
+Use this code chunk to compute the number of seconds in one day:
+```{r}
+
+```
+
+## Question 2 (3 points)
+
+Compute the mean and variance of the following observations. 
+**Hint:** Use built-in R functions to compute.
+
+```{r}
+x <- c(30, 11, 29, 59, 38)
+mean(x)
+var(x)
+```

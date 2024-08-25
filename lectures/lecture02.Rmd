@@ -1,0 +1,483 @@
+---
+title: "DATASCI 306: Lecture 2"
+subtitle: "Basic R,  Tables, Vectors, and ggplot"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+options(readr.show_progress = T)
+```
+
+
+
+## Variables and Assignment
+
+A **variable** is a box to store data. We put the results of expressions into variables using **assignment**.
+
+```{r}
+a <- 7
+b <- 12
+c <- a + b
+print(c)
+```
+
+Rules for variable names: start with a letter then letters, numbers, `.` or `_`
+
+
+## Naming variables meaningfully
+
+While syntax rules ensure your code compiles, choosing descriptive names makes it easier to understand and work with. For e.g:
+
+Here is a program to find the area of a circle
+
+**Bad style**
+
+```{r}
+a <- 5
+b <- pi * a ^ 2
+print(b)
+```
+
+**Good style**
+
+
+```{r}
+circle_radius <- 5
+circle_area <- pi * circle_radius^2
+print(paste("The area of the circle is:", circle_area))
+```
+
+Wondering what is `paste`? Ask R with `?paste` or `help(paste)` expressions.
+
+
+* RStudio's TAB completion makes it effortless to enter variable names after they've been declared.
+* On HW assignments, we will awarding for good *style* (readable code)
+* You are encouraged to follow the coding style suggested by tidyverse: https://style.tidyverse.org/
+
+## How does `knit` work in RStudio?
+
+When you **knit** an RMarkdown document, RStudio **starts a new process**.
+
+Every time it encounters an **R chunk** it **evaluates** the R code inside and inserts the output into the document (default; can be changed). 
+
+
+**Order is important**
+
+Because **statements** change the state, order of statements is very important.
+
+```{r warning=FALSE}
+a <- 7
+a <- 2
+print(a)  
+```
+
+**Working with code chunks, debugging hint**
+
+If you run into a problem (for e.g., a weird behavior that you can't explain logically), use the `Session -> Restart R` to clean up, and the use "Run all chunks above". Then try the chunk again. 
+
+## What can go in variables?
+
+R has several different **data types**. Some common types:
+
+* **Numeric**: `7`, `3.22`, `9.1e2`
+* **Strings**: `"Hello"` or `'Hello'` (also called "character vectors")
+* **Logicals**: `TRUE` and `FALSE`
+* We'll see more data types going forward
+* These are also referred to as the **class** of the data.
+
+## Why are variables useful?
+
+* Avoid repeatedly typing in the same thing
+* Save the results of computations
+* Avoid recomputing same values
+
+**Exercise: Using variables**
+
+Find the difference between 193 and 7. What is this value divided by two? What is this value divided by three? 
+The below code does solve the given problem. Can you make it more efficient using variables?
+
+```{r using-variables, exercise = TRUE, exercise.lines = 5}
+
+193 - 7
+
+(193 - 7) / 2
+
+((193-7) / 2) / 3
+
+```
+
+
+## Functions 
+A key tool in any programming language is a **function**.
+
+* R functions behave (mostly) like mathematical functions $f(x)$.
+* They take **arguments** and return **values**
+* Encapsulate code (mini-programs)
+* Make it easy to repeat operations
+
+**Syntax**
+
+```{r, eval = FALSE}
+return_value <- f(argument1, argument2, named_argument = additional_data, ...)
+```
+
+* Like math functions, we use the syntax `f()` to run the function
+* All **arguments** are **passed** to the function inside of the `()` separated by commas
+* Arguments can be passed in **positional** order or
+* Passed by **name**
+* Some arguments are **optional** when they have a default value
+* `...` means "any number of additional arguments"
+* `return_value` is the output of the function
+
+
+## Defining functions
+
+```{r, results='hide'}
+mult <- function(x, y) { 
+  print(paste('x = ' , x))
+  x * y 
+}
+```
+
+The `mult` function takes in two arguments and multiplies them
+
+```{r}
+mult(2, 10)
+mult(y = 5, x = 3)
+```
+There are many built-in functions in R that you can simply use.
+
+[Glimpse at R Vocabulary](http://adv-r.had.co.nz/Vocabulary.html)
+
+
+## Function evaluation
+
+In R, when we call a function, first the **arguments** are evaluated, then the function is called.
+
+```{r}
+mult(2, mult(2,3))
+```
+
+
+
+## Avoiding single use variables
+
+Sometimes we only need to use a statement once, so taking the time to come up with a variable name is unnecessary. 
+
+Instead we can use **pipes** to pass the output of one function to the **first argument** of a second function.
+
+```{r, eval = FALSE}
+value <- f()
+g(value)
+
+# pipes
+f() |> g()
+```
+
+```{r}
+mult(2.5, 3) |> round()
+```
+
+In older R programs, you also see another notation for pipe `%>%`.
+With this notation the same expression can be 
+
+```{r}
+mult(2.5, 3) %>% round
+```
+
+Note: We did not have to put the pair of parenthesis for this notation. If you do put, it doesn't hurt
+
+
+## Arrow can be reversed
+
+
+```{r}
+7 -> variable_reversed
+pi * variable_reversed
+pi |> sqrt() -> sqrt_pi
+sqrt_pi
+```
+
+There is a subtle difference between using `=` and `->` or `<-` when it comes to functions.  For example, the below function does not work if you use arrow. So for any function call key/value arguments, you have to use `=`
+
+
+```{r}
+x = c(10)
+try_me <- function(y = x){
+  print(y)
+}
+try_me(x)
+
+```
+
+## Some special values
+
+R has special data values
+
+* `NA` means "missing". Including a `NA` value in a calculation will usually make the result also `NA`.
+* `NULL` means "not set yet" and is often used for optional arguments to functions
+* `NaN` means something was divided by zero or other mathematical impossibility.
+
+You can think of the value of NA as "I don't know". Thus, logical and mathematical operations involving NA will again return NA, so that NAs "propagate through" the computation:
+
+```{r}
+NA + 5 # 5 + I-don't-know = I-don't-know
+1 < NA  # Is 1 less than I-don't-know? I don't know.
+NA < NA  # Is I-don't-know greater than I-don't-know? I don't know.
+NA == 1
+```
+Since you cannot test NAs for equality, R has a special function for determining whether a value is NA:
+
+```{r}
+is.na(NA)
+is.na(1)
+```
+Now, what will happen with this code?
+
+```{r na-prop}
+values = c(1, 2, NA)
+mean(values)
+```
+
+Instead add the keyword argument `na.rm = T` to instruct the function to first remove all the NA values and then compute the mean
+
+```{r}
+mean(values, na.rm = T)
+```
+
+
+
+## Lists and Vectors
+
+* A **vector** is an ordered collection of the same type of data. Created using the `c` function (concatenate).
+* A **list** is an ordered collection of (potentially) different types of data. Created using the `list` function.
+* Both can have **names** to indicate individual items.
+
+**Vector example**
+
+```{r}
+library(tidyverse)
+phone_digits <- c(8, 6, 7, 4, 3, 0, 9)
+phone_plus_area_code <- c(7, 3, 4, phone_digits)
+print(phone_plus_area_code)
+length(phone_plus_area_code)
+sum(phone_plus_area_code)
+str_flatten(phone_plus_area_code)
+```
+
+We will learn more on *str* functions when we learn Strings.
+
+**List example**
+
+Lists are heterogeneous while vectors are homogeneous
+
+```{r}
+mixed_type_list <- list(3, 4, phone_digits)
+mixed_type_list
+list("umich", 1, T)
+c("umich", 1, T)
+```
+
+
+
+## Vectors, indexing
+
+The `runif` function will create randomly generated values in the range (0, 1).
+
+```{r}
+random_u01 <- runif(10) # create 10 values
+print(random_u01)
+random_u01[1] # first item
+random_u01[10] # last item
+random_u01[-1] # all but first
+random_u01[1:3] # first three
+random_u01[c(1, 3, 7, 1)]
+```
+
+
+
+## Relational Operators
+
+```{r}
+x <- 1
+y <- 2
+
+x < y
+x > y
+x <= y
+x >= y
+x == y
+x != y
+
+!(x == y) # negation
+```
+
+**Assignment vs equality**
+
+An extremely common mistake for beginner programmers is to confuse = and == ("double equals") when writing code. As we have seen,
+
+>* = is used for; assigning a value to a variable, and passing a named parameter into a function.
+>* == is used for testing equality.
+
+## Boolean operations
+
+Logical expressions are combined using boolean operations. The basic boolean operations are and, or, and not, denoted &, | and ! respectively.
+
+```{r}
+! FALSE
+FALSE | TRUE
+! TRUE
+```
+
+R abbreviates TRUE and FALSE as T and F
+
+```{r}
+c(T, F)
+```
+
+
+
+## Vectors, subsetting using relational operators
+
+```{r}
+random_u01
+less_than_0.5 <- random_u01 < 0.5
+print(less_than_0.5)
+random_u01[less_than_0.5]
+keep(random_u01, random_u01 < 0.5)
+random_u01[!less_than_0.5]
+```
+
+
+
+## Named collections
+
+Vectors can have names (`c(first = 1, second = 22, third = 333)`), but names for lists are more common.
+```{r}
+named_list <- list(a_string = "Some value", a_vector = 1:4)
+named_list[["a_string"]] # note double brackets
+named_list$a_string
+```
+
+## Testing for membership
+Another useful operator is %in%:
+
+```{r}
+"a" %in% c(1, 2, 3)  # this statement is equivalent to the one below
+("a" == 1) | ("a" == 2) | ("a" == 3)
+```
+
+## `ifelse` function
+This is not new to you. `ifelse()` is a function that takes three vector arguments and returns a new vector. As you can see this is not the same as above
+
+```{r}
+# Define a vector
+x <- c(1, 2, 3, 4, 5)
+
+# Use ifelse to create a new vector
+y <- ifelse(x > 3, "large", 0)
+
+y
+```
+
+## What about `if_else`?
+`if_else` comes from dplyr and works the same as `ifelse` except the output from the `if_else` should be of the same type
+
+```{r}
+y <- if_else(x > 3, "large", 'small')
+y
+```
+
+## Tables in R
+
+In data analytics we often work with Tabular data where:
+
+>* columns are variables
+>* rows are observations
+
+A tabular data is presented using a `tibble` or `data.frame`.
+When we construct new tabular data, we will use `tibble` (from `dplyr`; part of `tidyverse`) as that is a better data structure than `data.frame` from base R package. However many existing old libraries use `data.frame`.
+We will treat them interchangeably for the most part.
+
+You construct a simple tibble with two columns named `a` and `b` as shown below
+
+```{r}
+tibble(a = c(1:10),
+       b = c(11:20))
+```
+Think of a data frame as a container for a bunch of vectors of data:
+
+<img src='./images/tibble.png' width = "1000px" />
+
+There are many tabular datasets readily available when we load `tidyverse` among them `mpg` is one of them. There are many functions you can use on the tibble and here we will see some of them
+
+```{r}
+glimpse(mpg)
+class(mpg)
+dim(mpg)
+colnames(mpg)
+head(mpg)
+```
+
+Why does the `class(mpg)` give you three different class names?
+
+because
+
+>* data.frame: The base R data structure for representing tabular data.
+>* tbl: A generic interface for working with tabular data. tibbles implement this interface.
+>* tbl_df: A specific implementation of the tbl interface, providing a more modern and feature-rich data frame experience. It builds on the data.frame structure.
+
+## Accessing individual columns
+
+Recall, the `$` operator lets us get items from lists:
+
+```{r}
+mpg$hwy |> mean() # equiv to mean(mpg$hwy)
+```
+
+## Other functions for basic descriptive statistics
+
+```{r}
+sum(mpg$hwy)
+var(mpg$hwy)
+sqrt(var(mpg$hwy)) # standard deviation
+median(mpg$hwy)
+IQR(mpg$hwy)
+quantile(mpg$hwy, c(0.25, 0.75))
+```
+
+All at once
+
+```{r}
+summary(mpg)
+```
+
+## Dealing with missingness
+
+To delete the missing values we have some options. Let us look into the `storms` data; another tabular data provided by NOAA Atlantic hurricane database representing the positions and attributes of storms from 1975-2022. 
+
+```{r}
+storms$category |> mean()
+storms$category |> mean(na.rm = T)
+na.omit(storms$category) |> mean()
+storms$category[!is.na(storms$category)] |> mean()
+```
+
+To find how many missing values are present in the category column
+
+```{r}
+is.na(storms$category) |> table()
+```
+
+## `homework/example-homework.Rmd`
+
+Using an example homework file, we'll answer a few questions and prepare our HW for submission.
+
+After running all code, it turns the markdown into a web page (`example-homework.Rmd` => `example-homework.html`)
