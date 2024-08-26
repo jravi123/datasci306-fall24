@@ -39,7 +39,7 @@ By the end of this course, you will
 
 
 ## Grading
-* Homework (25%). There will be about nine weekly problem sets. Most weeks, they will be posted on Thursday and due the following Thursday. Late submissions are not accepted, but we will drop your lowest two scores when calculating your homework average. You may discuss the homework with other students or use other resources from the Web, but you must write up your own solutions by understanding every statement that makes up your answer.
+* Homework (25%). There will be about 8 weekly problem sets. Most weeks, they will be posted on Friday and due the following Friday Late submissions are not accepted, but we will drop your lowest two scores when calculating your homework average. You may discuss the homework with other students or use other resources from the Web, but you must write up your own solutions by understanding every statement that makes up your answer.
 * Exams:
   * Midterm Exam - 1 (25%)
   * Midterm Exam - 2 (25%)
@@ -93,7 +93,7 @@ R is a *statistical programming language*:
 * A **version control system** manages changes from multiple sources simultaneously.
 * A reasonable analogy: Google Docs with track changes turned on
 * Useful for groups working together to track changes to the software package and document why changes were made
-* We will use it to disseminate homework assignments, labs, and lecture materials.
+* We will use it to disseminate labs, and lecture materials.
 
 
 ## How does git work?
@@ -123,7 +123,7 @@ You can import the GitHub class repository into your workspace by selecting the 
 
 <img src='images/git-import.png' width='600' />
 
-However, if you are working with the shared workspace that I'm currently presenting from, you do not need to import from GitHub. However, make sure you save a permanent copy of the files you change as every file you open from the shared workspace will be temporarily saved on your account and will not be available for the next time unless you make it permanent by clicking on the relevant button.
+However, if you are working with the shared workspace (that I'll use from next week), you do not need to import from GitHub. However, make sure you save a permanent copy of the files you change as every file you open from the shared workspace will be temporarily saved on your account and will not be available for the next time unless you make it permanent by clicking on the relevant button.
 
 
 ## Some basic POSIX CLI commands
@@ -139,7 +139,7 @@ $ command -o --options argument1 argument2
 * `$` is the prompt
 * `command` is what we want to do (e.g., `cd, git etc.`)
 * Optional flags have `-` or `--` in front and change behavior
-* We can tell what do with `argument1` and `argument2`. Some commands have no arguments.
+* We can tell what to do with `argument1` and `argument2`. Some commands have no arguments.
 
 
 * `cd dir_name`: Change directory. 
