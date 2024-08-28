@@ -17,7 +17,7 @@ options(readr.show_progress = T)
 
 
 
-## Variables and Assignment
+## Review from last class
 
 A **variable** is a box to store data. We put the results of expressions into variables using **assignment**.
 
@@ -141,7 +141,7 @@ return_value <- f(argument1, argument2, named_argument = additional_data, ...)
 
 ```{r, results='hide'}
 mult <- function(x, y) { 
-  print(paste('x = ' , x))
+  print(paste('x =' , x, ', y =', y))
   x * y 
 }
 ```
@@ -195,7 +195,7 @@ mult(2.5, 3) %>% round
 Note: We did not have to put the pair of parenthesis for this notation. If you do put, it doesn't hurt
 
 
-## Arrow can be reversed
+## We know that arrow can be reversed
 
 
 ```{r}
@@ -208,7 +208,7 @@ sqrt_pi
 There is a subtle difference between using `=` and `->` or `<-` when it comes to functions.  For example, the below function does not work if you use arrow. So for any function call key/value arguments, you have to use `=`
 
 
-```{r}
+```{r arrow, exercise = T}
 x = c(10)
 try_me <- function(y = x){
   print(y)
@@ -223,9 +223,9 @@ R has special data values
 
 * `NA` means "missing". Including a `NA` value in a calculation will usually make the result also `NA`.
 * `NULL` means "not set yet" and is often used for optional arguments to functions
-* `NaN` means something was divided by zero or other mathematical impossibility.
+* `NaN` means Not a Number.  Typically impossible values like dividing a complex number by zero gets you NaN. Apply to real and imaginary parts of complex values.
 
-You can think of the value of NA as "I don't know". Thus, logical and mathematical operations involving NA will again return NA, so that NAs "propagate through" the computation:
+You can think of the value of NA (for the most part NaN also) as "I don't know". Thus, logical and mathematical operations involving NA will again return NA, so that NAs "propagate through" the computation:
 
 ```{r}
 NA + 5 # 5 + I-don't-know = I-don't-know
@@ -375,7 +375,7 @@ Another useful operator is %in%:
 ```
 
 ## `ifelse` function
-This is not new to you. `ifelse()` is a function that takes three vector arguments and returns a new vector. As you can see this is not the same as above
+`ifelse()` is a function from `base R` that takes three vector arguments and returns a new vector. 
 
 ```{r}
 # Define a vector
@@ -388,6 +388,8 @@ y
 ```
 
 ## What about `if_else`?
+`tidyverse` is a popular R package for data analytics. `tidyverse` comes with many packages that includes `dplyr`
+
 `if_else` comes from dplyr and works the same as `ifelse` except the output from the `if_else` should be of the same type
 
 ```{r}
@@ -462,6 +464,11 @@ summary(mpg)
 ## Dealing with missingness
 
 To delete the missing values we have some options. Let us look into the `storms` data; another tabular data provided by NOAA Atlantic hurricane database representing the positions and attributes of storms from 1975-2022. 
+
+```{r}
+storms |> head()
+```
+
 
 ```{r}
 storms$category |> mean()

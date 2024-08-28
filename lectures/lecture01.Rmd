@@ -251,7 +251,6 @@ it were an R chunk, even though it is not really one. -->
 
 
 ## Getting started with R programming...
-
 Let us solve some math problems.
 
 * add 2 and 5 
@@ -263,6 +262,9 @@ Let us solve some math problems.
 
 
 ```
+
+
+
 The "Start Over" button will give you a fresh environment.
 
 ## Expressions and Statements
