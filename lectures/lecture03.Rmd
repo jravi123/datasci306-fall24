@@ -120,14 +120,35 @@ We will use a **geometry function** (have the form `geom_TYPE()`).
 efficiency + geom_point()
 ```
 
-**Alternative ways**
+
+**Alternative forms**
 
 ```{r eval = F}
-
 ggplot(data = mpg) + geom_point(aes(x = displ, y = hwy, color = cyl))
 
 mpg |> ggplot() + geom_point(aes(x = displ, y = hwy, color = cyl))
+
+mpg |> ggplot(mapping = aes(x = displ, y = hwy, color = cyl)) + geom_point()
+
+ggplot(mpg, aes(x = displ, y = hwy, color = cyl)) + geom_point()
+
+ggplot(mpg, aes(x = displ)) + geom_point(aes(y = hwy, color = cyl))
 ```
+
+Note: You can use positional arguments or use `data`, `mapping` argument names to call these functions
+
+Mapping values from `ggplot` are inherited by layers
+
+
+## Question
+Is the cylinder really a continuous variable?
+How else can I make this better?
+
+```{r ex1, exercise = TRUE}
+mpg |> ggplot() + geom_point(aes(x = displ, y = hwy, color = cyl))
+
+```
+
 
 ## Exercise: Great Lakes water levels
 
@@ -192,10 +213,6 @@ ggplot(data = mpg, aes(x = displ, y = hwy)) +
 ```
 
 
-## List of geometries
-
-[More ggplot documentation](https://ggplot2.tidyverse.org/reference/index.html#geoms).
-
 
 ## General observations
 
@@ -204,48 +221,9 @@ ggplot(data = mpg, aes(x = displ, y = hwy)) +
 * The [R Graph Gallery](https://r-graph-gallery.com/) is a great source of inspiration and instruction
 
 
-## Another example
-
-Here is another example using `mpg` dataset
-
-```{r}
-ggplot(data = mpg,
-       aes(x = displ, y = hwy, color = cyl)) +
-  geom_point()
-```
 
 
 
-**Alternative forms**
-
-```{r eval = F}
-ggplot(data = mpg) + geom_point(aes(x = displ, y = hwy, color = cyl))
-
-mpg |> ggplot() + geom_point(aes(x = displ, y = hwy, color = cyl))
-
-mpg |> ggplot(mapping = aes(x = displ, y = hwy, color = cyl)) + geom_point()
-
-ggplot(mpg, aes(x = displ, y = hwy, color = cyl)) + geom_point()
-
-ggplot(mpg, aes(x = displ)) + geom_point(aes(y = hwy, color = cyl))
-```
-
-Note: You can use positional arguments or use `data`, `mapping` argument names to call these functions
-
-Mapping values from `ggplot` are inherited by layers
-
-
-Let's visit the ggplot docs for scatter plot: [`geom_point`](https://ggplot2.tidyverse.org/reference/geom_point.html)
-
-## One more example
-
-```{r}
-ggplot(data = mpg,
-       aes(x = displ, y = hwy,
-           size = cyl,
-           color = class)) + 
-  geom_point()
-```
 
 ## Other geometries
 
