@@ -1,0 +1,440 @@
+---
+title: "DATASCI 306 Lab2"
+output: 
+  learnr::tutorial:
+    progressive: true
+runtime: shiny_prerendered
+---
+
+<style type="text/css">
+  body{
+  font-size: 14pt;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+# Plotting with `ggplot2`
+
+Recall from lecture that a plot made using `ggplot2` has several components:
+
+* The graph object itself (creating using `ggplot(data)`)
+* A set of *aesthetic* mappings (connecting data to visual variables)
+* Layers: collections of geometric elements (`geom_*()`) and statistical transformations (`stat_*()`)
+* Scales: information on the range or composition of variables
+* Coordinate systems: how the data are arranged spatially
+* Facet: breaking a single plot into many, similar plots
+* Theme: all the other color and printing aspects of the plot
+
+Today we'll talk about aesthetic mappings, geometric elements, and statistical transformations.
+
+## Aesthetic Mappings
+
+An *aesthetic* is a visual property of the geometric elements in a plot.
+
+```{r aesthetic_mappings_example1}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = cty, y = hwy, color = drv))
+```
+
+Geometric elements represent observations in the dataset. In the plot above, the points are the geometric elements. Different geometric elements have different aesthetics. Some aesthetics of points are
+
+* `x`, or x-coordinate
+* `y`, or y-coordinate
+* `color`
+* `shape`
+* `size`
+
+The background, the gridlines, and the tick marks are not geometric elements because they don't represent any observations. This means that properties like the background color aren't aesthetics.
+
+An *aesthetic mapping* is an assignment of an aesthetic to a variable in the dataset. Aesthetic mappings are listed inside `aes()`. For example, in the previous plot, the aesthetic `x` was mapped to the variable `cty`. 
+
+Each layer has a set of aesthetic mappings. By default, a layer inherits its mappings from the base created by `ggplot()`. So, the code for the plot above could be changed to
+
+```{r aesthetic_mappings_example2}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy, color = drv)) + 
+  geom_point()
+```
+
+Mapping `color` to a categorical variable will cause the observations to be grouped by category in addition to being colored by category. That's why we get one boxplot for each drive train or `drv` category in the plot below.
+
+```{r mapping_color_example}
+ggplot(data = mpg, mapping = aes(y = hwy, color = drv)) + 
+  geom_boxplot()
+```
+
+To explicitly group by drive train, we can map the `group` aesthetic to `drv`. However, if we don't also map `color`, then the boxplots won't be colored differently, and there won't be a legend explaining which boxplot is for which drive train.
+
+```{r mapping_group_example}
+ggplot(data = mpg, mapping = aes(y = hwy, group = drv)) + 
+  geom_boxplot()
+```
+
+### Exercise 1 {-}
+
+#### (a) {-}
+
+Modify the code below so that the point shape varies by drive train.
+
+```{r exercise1a, exercise=TRUE}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = cty, y = hwy, color = drv))
+```
+
+```{r exercise1a-solution}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = cty, y = hwy, color = drv, shape = drv))
+```
+
+#### (b) {-}
+
+Modify the code below so that each point is a triangle. How is your code different from your code for part (a)? Why is it different?
+
+*Hint: use the string "triangle"*
+
+```{r exercise1b, exercise=TRUE}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = cty, y = hwy, color = drv))
+```
+
+```{r exercise1b-solution}
+# The key difference here is that the shape = part goes outside aes() instead
+# of inside aes(). This is because here we're setting shape to a constant
+# instead of mapping it to a variable. Only aesthetic mappings go inside
+# aes().
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = cty, y = hwy, color = drv), shape = "triangle")
+```
+
+## Geometric Elements
+
+A *geometric element* or *geom* is a geometric object that is used in a plot to represent observations. A geom can represent
+
+  * one observation;
+  * a group of observations;
+  * all of the observations.
+
+A `ggplot2` plot consists of a base created by `ggplot()` and zero or more layers, each representing observations in a particular dataset using a particular geom. There are many geoms; several commonly used geoms are described below. The examples visualize a dataset called `midwest` that has data from the 2000 census on counties in several midwestern states.
+
+```{r convert_inmetro}
+# inmetro is an integer that equals 0 or 1; plots will look better if it's
+# logical
+midwest <- mutate(midwest, inmetro = as.logical(inmetro))
+```
+
+### Plotting the Distribution of One Variable
+
+If we want to visualize the distribution of a single variable, we first need to determine whether it's categorical or numerical.
+
+If the variable is categorical, then we can make a bar chart. We use `geom_bar()` to do this. The plot below shows the number of counties by state.
+
+```{r geom_bar_example}
+midwest %>%
+  ggplot(aes(state)) +
+  geom_bar()
+```
+
+There are several options if the variable is numerical. `perchsd` gives the percentage of high school graduates. We could make a histogram of `perchsd` using `geom_histogram()`.
+
+```{r geom_histogram_example}
+midwest %>%
+  ggplot(aes(perchsd)) +
+  geom_histogram()  
+```
+
+We could also make a frequency polygon with `geom_freqpoly()`.
+
+```{r geom_freqpoly_example}
+midwest %>%
+  ggplot(aes(perchsd)) +
+  geom_freqpoly()
+```
+
+Finally, we could use `geom_boxplot()` to make a boxplot.
+
+```{r geom_boxplot_example1}
+midwest %>%
+  ggplot(aes(perchsd)) +
+  geom_boxplot()
+```
+
+### Plotting the Relationship between Two Variables
+
+Just like in the one variable case, when we have two variables, we first need to determine the types of the variables before we make our plot.
+
+We can make a scatterplot with `geom_point()` if both variables are continuous variable. The plot below displays the relationship between `perchsd` and `percadultpoverty`, the percentage of adults below the poverty line.
+
+```{r geom_point_example}
+midwest %>%
+  ggplot(aes(perchsd, percadultpoverty)) +
+  geom_point()
+```
+
+Instead of plotting all of the points, we could plot a *smooth*, a curve that summarizes the trend in the data. This is done with `geom_smooth()`.
+
+```{r geom_smooth_example}
+midwest %>%
+  ggplot(aes(perchsd, percadultpoverty)) +
+  geom_smooth(se = FALSE)
+```
+
+#### Exercise 2 {-}
+
+##### (a) {-}
+
+Make a plot of `percadultpoverty` versus `perchsd` that has both points and a smooth.
+
+```{r exercise2a, exercise=TRUE}
+
+```
+
+```{r exercise2a-solution}
+midwest %>%
+  ggplot(aes(perchsd, percadultpoverty)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+```
+
+##### (b) {-}
+
+Make a plot that is the same as the one in part (a), except with a confidence interval around the smooth. What do you notice about the width of the interval? Why does it make sense for the width to be how it is?
+
+*Hint: look at the help page for `geom_smooth()` to make the interval*
+
+```{r exercise2b, exercise=TRUE}
+
+```
+
+```{r exercise2b-solution}
+# The width increases toward the sides of the plot. This makes sense, as there
+# are few points near the sides, so the estimates of the trend there should be
+# highly uncertain.
+midwest %>%
+  ggplot(aes(perchsd, percadultpoverty)) +
+  geom_point() +
+  geom_smooth() # Inserting se = TRUE is unnecessary since se = TRUE by default
+```
+##### (c) {-}
+
+You might have noticed that the smooth in part (b) was calculated using a method called LOESS. Other methods can be used as well. Remake the plot, but with a smooth calculated using linear regression.
+
+*Hint: look at the help page for `geom_smooth()` again*
+
+```{r exercise2c, exercise=TRUE}
+
+```
+
+```{r exercise2c-solution}
+midwest %>%
+  ggplot(aes(perchsd, percadultpoverty)) +
+  geom_point() +
+  geom_smooth(method = "lm") # lm() is the function used for linear regression
+```
+
+`box and whisker plot` is meant for a continuous variable. When you want to group records based on a categorical variable and then draw a boxplot for the subset of the grouped data, you can use both the categorical and continuous as shown below.
+
+```{r geom_boxplot_example2}
+midwest %>%
+  ggplot(aes(state, percollege)) +
+  geom_boxplot()
+```
+
+We could also make a bar chart using `geom_col()`. Below, `midwest2` contains one row per state in `midwest` and has the number of counties for each state. We can use `geom_col()` to recreate the bar chart made with `geom_bar()` above.
+
+```{r geom_col_example}
+midwest2 <- midwest %>%
+  group_by(state) %>%
+  summarize(num_counties = n())
+midwest2 %>%
+  ggplot(aes(state, num_counties)) +
+  geom_col()
+```
+
+#### Exercise 3 {-}
+
+##### (a) {-}
+
+A `histogram` is another plot meant for a continuous variable.
+Instead of drawing multiple boxplots to visualize the relationship between `percollege` and `state`, we could use histograms. Make one plot that has a histogram of `percollege` for each value of `state`. Give the histograms different colors. How does this plot compare to the boxplot?
+
+```{r exercise3a, exercise=TRUE}
+
+```
+
+```{r exercise3a-solution}
+# This plot is harder to read than the boxplot. However, unlike the boxplot, it
+# does show that the different states have different numbers of counties.
+midwest %>%
+  ggplot(aes(percollege, color = state)) +
+  geom_histogram()
+```
+
+##### (b) {-}
+
+Now make a one plot that has a frequency polygon for each state instead of a histogram. Give the frequency polygons different colors. How does this plot compare to the preceding plots?
+
+```{r exercise3b, exercise=TRUE}
+
+```
+
+```{r exercise3b-solution}
+# This plot is also hard to read, and it also shows the count information that
+# the boxplot doesn't show.
+midwest %>%
+  ggplot(aes(percollege, color = state)) +
+  geom_freqpoly()
+```
+##### (c) {-}
+
+Complete the code below to use boxplots to visualize the relationship between `inmetro` and `percollege`. `inmetro` is `TRUE` if a county is in a metro area and false otherwise.
+
+```{r exercise3c, exercise=TRUE}
+midwest %>%
+  mutate(inmetro = as.logical(inmetro)) %>%
+  ggplot()
+```
+
+```{r exercise3c-solution}
+midwest %>%
+  mutate(inmetro = as.logical(inmetro)) %>%
+  ggplot(aes(inmetro, percollege)) +
+  geom_boxplot()
+```
+
+##### (d) {-}
+
+Now complete the code to use frequency polygons to visualize the relationship. Is this plot worse than the boxplot?
+
+```{r exercise3d, exercise=TRUE}
+midwest %>%
+  mutate(inmetro = as.logical(inmetro)) %>%
+  ggplot
+```
+
+```{r exercise3d-solution}
+# Unlike the previous frequency polygon plot, this one isn't hard to read. This
+# plot provides count information that the boxplot doesn't provide. So, unlike
+# previously, the frequency polygon plot isn't worse than the boxplot.
+midwest %>%
+  mutate(inmetro = as.logical(inmetro)) %>%
+  ggplot(aes(percollege, color = inmetro)) +
+  geom_freqpoly()
+```
+
+Finally, if both variables are categorical, we can plot them using `geom_count()`.
+
+```{r geom_count_example}
+midwest %>%
+  ggplot(aes(state, inmetro)) +
+  geom_count()
+```
+
+## Statistical Transformations
+
+A *statistical transformation* or *stat* is an algorithm that computes from raw data values the values that will be plotted. The available stats are implemented in functions whose names begin with `stat_`. A stat is applied even when the raw values themselves are to be plotted. In that case, the stat that is applied is `stat_identity()`. For example, suppose that our dataset is
+
+```{r stat_identity_example1}
+(tbl <- tibble(x = 2^(-3:3), y = log(x)))
+```
+
+The result of applying `stat_identity()` to `tbl` would be `tbl`.
+
+Each geom has a default stat and each stat has a default geom. We can see which stat is the default stat for a geom by looking at the default value of the geom's `stat` argument. For instance, the default value of `stat` for `geom_point()` is `"identity"`.
+
+```{r geom_point_default_stat}
+geom_point
+```
+
+In a similar way, we can view the default geom for a stat:
+
+```{r stat_identity_default_geom}
+stat_identity
+```
+
+Because of the above, geoms and stats are interchangeable, i.e., you can do `ggplot() + stat_*()` instead of `ggplot() + geom_*()`. Thus, to make a scatterplot of `y` versus `x`, we could use the code below:
+
+```{r geom_point_example2}
+ggplot(tbl, aes(x, y)) +
+  geom_point()
+```
+
+Or we could use the code below:
+
+```{r stat_identity_example2}
+ggplot(tbl, aes(x, y)) +
+  stat_identity()
+```
+
+Stats are more of an issue for bar charts than for scatterplots. The default stat for `geom_bar()` is `stat_count()`. Suppose we wanted to use `midwest` to count counties in midwestern states like we did in a previous section. `stat_count()` takes `midwest` and computes the below tibble from it:
+
+```{r stat_count_example}
+(midwest2 <- midwest %>%
+  group_by(state) %>%
+  summarize(count = n(), prop = n() / n()) %>%
+  ungroup())
+```
+
+`geom_bar()` uses the new tibble to construct the plot - `x` is mapped to `state` and `y` is mapped to `count`.
+
+```{r geom_bar_example2}
+ggplot(midwest, aes(state)) +
+  geom_bar()
+```
+
+If we wanted to make the mapping of `y` explicit, we could use `after_stat()` as below. `after_stat(count)` indicates that we want to map the `count` variable in the tibble created by the stat.
+
+```{r after_stat_example1}
+ggplot(midwest, aes(state, after_stat(count))) +
+  geom_bar()
+```
+
+Note that a `prop` variable was also created by the stat. We can use `after_stat()` to map `prop` instead of `count`. This causes the height of each bar to be a proportion instead of a count. `group = 1` ensures that the denominator of each proportion is the total number of counties.
+
+```{r after_stat_example2}
+ggplot(midwest, aes(state, after_stat(prop), group = 1)) +
+  geom_bar()
+```
+
+### Exercise 4 {-}
+
+#### (a) {-}
+
+Let's return to the situation considered in Exercise 2(a). Again make a plot of `percadultpoverty` versus `perchsd` that has both points and a smooth, but change a setting to make the smooth much wigglier. Why is it a bad idea to do this?
+
+*Hint: look at an appropriate help page*
+
+```{r exercise4a, exercise=TRUE}
+
+```
+
+```{r exercise4a-solution}
+# A very wiggly smooth might capture quirks of the data that are due to chance
+# variation instead of the underlying pattern
+midwest %>%
+  ggplot(aes(perchsd, percadultpoverty)) +
+  geom_point() +
+  stat_smooth(span = 0.1) # Any small value is acceptable here
+```
+
+#### (b) {-}
+
+Like you did in Exercise 2(b), make a scatterplot of `percadultpoverty` versus `perchsd` with a confidence interval around the smooth. This time, create a confidence interval whose level is 0.5. Why is the interval different from the previous interval?
+
+*Hint: take another look at the documentation*
+
+```{r exercise4b, exercise=TRUE}
+
+```
+
+```{r exercise4b-solution}
+# The confidence level for the previous interval was 0.95. The smaller the
+# confidence level, the narrower the interval is.
+midwest %>%
+  ggplot(aes(perchsd, percadultpoverty)) +
+  geom_point() +
+  stat_smooth(level = 0.5)
+```

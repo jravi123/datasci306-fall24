@@ -1,0 +1,285 @@
+---
+title: 'DATASCI 306: Lab 2b'
+author: "Your Name"
+output: html_document
+---
+
+## Set up
+
+```{r installPackages, echo=FALSE, include=FALSE, message=FALSE}
+# This just checks if students need to install some packages that they might 
+# not have.
+
+if (!require(ggforce)) install.packages("ggforce", repos = "http://cran.us.r-project.org")
+if (!require(maps)) install.packages("maps", repos = "http://cran.us.r-project.org")
+if (!require(mapproj)) install.packages("mapproj", repos = "http://cran.us.r-project.org")
+if (!require(lattice)) install.packages("lattice", repos = "http://cran.us.r-project.org")
+```
+
+```{r setup, echo=TRUE}
+library(tidyverse)  # For ggplot2, dplyr
+library(maps)       # For plotting maps 
+library(ggforce)    # For hurricane map, later. 
+```
+
+## Facets 
+
+Faceting allows us to split data into subset and plot similar graphs for each subset. 
+In lecture we saw that facets are often very useful to avoid over-fitting. 
+There are three types of facets in `ggplot2`: 
+
+* `facet_wrap`: Creates a one-dimensional set of plots, that are often shown in a 2d grid.
+* `facet_grid`: Creates a two-dimensional grid of panels, defined by two different columns. 
+* `facet_null`: This is the default facet, which is just a single plot
+
+## Difference between `facet_wrap` and `facet_grid`
+
+\
+\
+\
+
+<center>
+
+![A sketch difference between facetting systems. Figure borrowed from [ggplot2 book](https://ggplot2-book.org/facet.html)](images/facets.png)
+
+</center>
+
+## `facet_wrap` Example
+
+Lets use the `ToothGrowth` dataset:
+
+```{r headTooth, exercise=TRUE}
+head(ToothGrowth)
+```
+
+```{r uniqueDose, exercise=TRUE}
+unique(ToothGrowth$dose)
+```
+
+A box-plot of all of the data: 
+
+```{r}
+tooth_gg <- ggplot(ToothGrowth) + 
+  geom_boxplot(aes(y = len)) + 
+  theme_bw()
+
+print(tooth_gg)
+```
+
+
+```{r createBasicBox, echo=TRUE, include=FALSE}
+tooth_gg <- ggplot(ToothGrowth) + 
+  geom_boxplot(aes(y = len)) + 
+  theme_bw()
+```
+
+Now if we want to summarize at the distribution for tooth growth for each supplement, we can facet on supplement: 
+
+```{r wrappedBox, exercise=TRUE, exercise.setup="createBasicBox"}
+tooth_gg + 
+  facet_wrap(~supp)
+```
+
+If we wanted to have two rows of figures instead of two columns, we can specify this with `ncol = 1` or `nrow = 2`
+
+```{r wrappedBox2, exercise=TRUE, exercise.setup="createBasicBox"}
+tooth_gg + 
+  facet_wrap(~supp, ncol = 1)
+```
+
+We can get the same figure (but with labels on the side) by using `facet_grid`.
+
+```{r gridBox1, exercise=TRUE, exercise.setup="createBasicBox"}
+tooth_gg + 
+  facet_grid(supp~.)
+```
+
+In the previous code, we are saying that we want the rows of the grid to correspond to the variable `supp`, and we want to give it an empty variable `.` for the columns. 
+We can "rotate" the figure by switching the order of these variables: 
+
+```{r gridBox2, exercise=TRUE, exercise.setup="createBasicBox"}
+tooth_gg + 
+  facet_grid(.~supp)
+```
+
+We can of course include a second variable rather than a missing variable if we wanted to do so: 
+
+```{r gridBox3, exercise=TRUE, exercise.setup="createBasicBox"}
+tooth_gg + 
+  facet_grid(supp~dose)
+```
+
+The order of the variables depends on what information we are most interested in showing.
+For example, in the previous plot, the order makes it easiest to compare the effect of various different levels of dose for each supplement. 
+If we were interested how supplements compare for similar dosages, the following plot may be preferred:
+
+```{r gridBox4, exercise=TRUE, exercise.setup="createBasicBox"}
+tooth_gg + 
+  facet_grid(dose~supp)
+```
+
+## `facet_wrap` Exercise
+
+For this exercise, we are going to use the `barley` data from the `lattice` package. 
+This is famous statistical dataset that has been cited in many papers.
+We will use it to create a *Cleveland dot plot*. 
+
+```{r}
+barley <- lattice::barley
+head(barley)
+```
+
+```{r loadBarley}
+barley <- lattice::barley
+```
+
+**Exercise**: Add a facets and colors to the following code to reduce over-plotting. 
+Do you notice anything strange about the data? 
+
+```{r facetExercise, exercise=TRUE, exercise.setup="loadBarley"}
+ggplot(barley) + 
+  geom_point(aes(x = yield, y = variety)) + 
+  theme_bw()
+```
+
+## `facet_wrap` Solution 
+
+William Cleveland (to whom the term "data science" is often attributed) famously made a plot similar to the following in a textbook he published:
+
+```{r}
+ggplot(barley) + 
+  geom_point(aes(x = yield, y = variety, col = year)) + 
+  facet_wrap(~site) + 
+  theme_bw()
+```
+
+In this plot, he points out that an oddity in Morris: it's the only site in which the 1932 crop yield was higher than that in 1931! 
+Using this plot, he claimed that the data must have been mislabeled (although there is [some recent argument](https://blog.revolutionanalytics.com/2014/07/theres-no-mistake-in-the-barley-data.html) that this is not the case). 
+
+## Coordinate Systems
+
+In our last lecture, we looked closely at various *coordinate systems* in `ggplot2`. 
+Coordinate systems allow us to easily change how the data are displayed, with limited effort. 
+
+There are *linear* coordinate systems that don't change the shape of `geoms`: 
+
+> - `coord_cartesian()`: Default coordinate system
+> - `coord_flip()`: Default coordinate system, but flipping `x` and `y` axis. 
+> - `coord_fixed()`: Default coordinate system, but fixing the ratio between `x` and `y` axis. 
+
+There are also *non-linear* coordinate systems, that can change the shape of `geoms`: 
+
+> - `coord_polar()`: Polar coordinates.
+> - `coord_map()`: Map projections (spherical earth to 2D plane).
+> - `coord_trans()`: Custom transformations to `x` and `y` positions. 
+
+## Polar Coordinate Example
+
+One of the most common coordinate transformations we see for data visualizations is **Polar-Coordinates**. 
+The idea for polar coordinate mapping is that sometimes displaying the information as an angle and radius is more informative than displaying the information in the `x, y` Cartesian plane,
+for example polar coordinates often help us visualize seasonal effects. 
+
+```{r mtcarsPolar, exercise=TRUE}
+my_cars <- mtcars
+my_cars$model <- rownames(mtcars)
+ggplot(my_cars) + 
+  geom_bar(aes(y = mpg, x = model), stat = 'identity') + 
+  coord_polar() + 
+  theme_bw()
+```
+
+## `coord_map()` Example
+
+Let's take a look at a new coordinate system, using `coord_map()`. 
+First, we will use the `maps` package to get information about some North American Countries. 
+
+```{r NorthAmerica, echo=TRUE}
+world <- map_data("world") %>%
+  filter(region %in% c("USA", "Canada", "Mexico", "Jamaica",
+                       "Cuba", "Panama", "Guatemala", "Puerto Rico", 
+                       "Costa Rica", "Dominican Republic", "Haiti",
+                       "El Salvador", "Belize", "Bahamas", "Nicaragua",
+                       "Honduras", "Trinidad")) %>%
+  filter(long < 0)
+```
+
+We can plot this data using `ggplot2` and `geom_polygon()`. 
+Lets save the map to use later:
+
+```{r plotNorthAmerica, echo=TRUE}
+my_map <- ggplot(world) + 
+  geom_polygon(aes(x = long, y = lat, group = group), fill = 'white',
+               col = 'black') + 
+  theme_bw()
+
+print(my_map)
+```
+
+## `coord_map()` continued
+
+```{r preLoadMap}
+world <- map_data("world") %>%
+  filter(region %in% c("USA", "Canada", "Mexico", "Jamaica",
+                       "Cuba", "Panama", "Guatemala", "Puerto Rico", 
+                       "Costa Rica", "Dominican Republic", "Haiti",
+                       "El Salvador", "Belize", "Bahamas", "Nicaragua",
+                       "Honduras", "Trinidad")) %>%
+  filter(long < 0)
+
+my_map <- ggplot(world) + 
+  geom_polygon(aes(x = long, y = lat, group = group), fill = 'white',
+               col = 'black') + 
+  theme_bw()
+```
+
+The problem with the previous slide is that the polygons are a bit distorted, so the polygons don't look exactly like we would expect.
+`coord_map()` can help fix this issue.
+In particular, we will start with `coord_quickmap()`, which is the simplest implementation. 
+
+```{r coordQuickMap, exercise=TRUE, exercise.setup="preLoadMap"}
+my_map + 
+  coord_quickmap()
+```
+
+## `coord_map()` Continued
+
+There are probably better ways to project the 3D world onto a 2D surface. 
+You can explore some of these options by looking at the help page for `coord_map` and `mapproj::mapproject`.
+Let's use the [globular](https://en.wikipedia.org/wiki/Nicolosi_globular_projection) projection
+
+```{r globularMap, exercise=TRUE, exercise.setup="preLoadMap"}
+my_map + 
+  coord_map('globular')
+```
+
+## Hurricane Map
+
+For this next plot, we will use the built in `storms` dataset, and we will look particularly at the storms in $2016$. 
+
+```{r HurricaneMap, exercise=TRUE, exercise.setup="preLoadMap"}
+my_storms <- storms %>%
+  filter(year == 2016, name %in% c('Matthew', "Nicole", "Karl", "Otto"))
+
+my_map + 
+  coord_map('globular') + 
+  geom_path(data = my_storms, aes(x = long, y = lat), col = 'red') +
+  # geom_circle(
+  #   data = my_storms, 
+  #   aes(x0 = long, y0 = lat, r = tropicalstorm_force_diameter/120),
+  #   col = 'red'
+  # ) +
+  coord_map('globular') +  # results in distorted storm circles
+  guides(color = "none") + 
+  theme_bw() + 
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank()
+  ) + 
+  facet_wrap(~name) + 
+  ggtitle("Selected 2016 Tropical Storms and Hurricanes")
+```
+
+The variable `tropicalstorm_force_diameter` gives the diameter in nautical miles of the area experiencing tropical storm force winds. 
+Because 1 degree of latitude corresponds to approximately 60 nautical miles, we can approximately display the impact area of each storm by adding circles with radius `tropicalstorm_force_diameter/120`. 
+Note that these circles can be distorted based on our projection. 
