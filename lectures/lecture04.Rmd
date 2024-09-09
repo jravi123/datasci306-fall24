@@ -1,0 +1,279 @@
+---
+title: "Stats 306: Lecture 4"
+subtitle: "Graphics: Facets, Coordinate Systems"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(lubridate) # install.packages("lubridate") if you don't have this
+```
+
+## Todays topic
+ * More on ggplot layers
+ * Coordinate systems
+ * Facets
+
+## Review
+
+Quantitative vs. Categorical measurements in R
+
+```{r}
+class(c(1.0, 2.2, 3.14159)) # quantitative
+class(mpg$cyl) # quantitative (but is it a continuous variable?)
+class(mpg$class) # categorical 
+class(factor(mpg$cyl)) # categorical
+```
+
+
+
+## `ggplot` and types of data
+
+Some aesthetic mappings behave differently if they have quantitative or categorical columns.
+
+By default, `cyl` will be treated as continuous quantitative variable:
+```{r}
+ggplot(data = mpg, aes(x = hwy, y = cty, color = cyl)) +
+  geom_jitter(size = 2)
+```
+
+**Forcing variables to be categorical**
+
+```{r}
+ggplot(data = mpg, aes(x = hwy, y = cty, color = factor(cyl))) +
+  geom_jitter(size = 2)
+```
+
+## Geometries that expect categorical mappings
+
+```{r}
+ggplot(data = mpg, aes(x = cyl, y = cty)) +
+  geom_boxplot()
+```
+
+## What we probably wanted
+
+```{r}
+ggplot(data = mpg, aes(x = factor(cyl), y = cty)) +
+  geom_boxplot()
+```
+
+
+
+## Another overplotting example
+
+```{r}
+ggplot(diamonds, aes(carat, price)) +
+  geom_point()
+```
+
+Using jitter
+
+
+```{r}
+ggplot(diamonds, aes(carat, price)) +
+  geom_jitter()
+```
+Jitter isn't helping. How about adding `alpha` param to aes instead?
+
+```{r}
+ggplot(diamonds, aes(carat, price)) + 
+  geom_point(alpha = 1/100)
+```
+
+## Introducing formulas
+
+R has a special syntax for expressing **formulas**
+
+```{r eval = FALSE}
+y ~ x1 + x2 + x3 * x4
+```
+
+Used for specifying statistical models for Y given some predictors X
+
+
+## Facets: "sub grouping"
+
+```{r}
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_jitter() +
+  facet_wrap(~ class)
+```
+
+
+
+Faceting sub groups the dataset based on each distinct value of the column `class` and then plots the 'x' and 'y' specified.
+
+## Forcing on one row
+
+```{r}
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_jitter() +
+  facet_wrap(~ class, nrow = 1)
+```
+
+## Forcing two columns
+
+```{r}
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_jitter() +
+  facet_wrap(~ class, ncol = 2)
+```
+
+## Facets can include everything plots have 
+
+```{r warning = FALSE}
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_jitter() +
+  stat_smooth() + 
+  facet_wrap(~ class) 
+```
+
+
+## Multiple factors
+
+```{r warning = FALSE}
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_jitter() +
+  stat_smooth() + 
+  facet_wrap(~ class + drv) 
+```
+
+
+## Two way facets (`facet_grid`)
+
+```{r warning = FALSE}
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_jitter() +
+  stat_smooth() + 
+  facet_grid(vars(drv), vars(cyl))
+```
+
+Use vars() to supply variables from the dataset
+
+
+## Exercise
+
+Create a facet plot to visualize the relationship between price and carat, grouped by cut
+
+```{r facet, exercise = TRUE}
+ggplot(data = diamonds, aes(x = price, y = carat)) 
+```
+
+```{r facet-solution}
+ggplot(data = diamonds, aes(x = price, y = carat)) +
+  geom_point() +
+  facet_wrap(~ cut)
+```
+
+
+## Coordinate Systems
+
+Thus far we have been using the default **Cartesian coordinate system**.
+
+There are many other ways in which we can connect our **position visual variables** to their actual locations on a plane.
+
+This are called **coordinate systems** or **projections**.
+
+## Coordinate systems for presentation
+
+Why use a different coordinate system? One reason to provide a convenient or interesting **presentation**.
+
+Base plot:
+```{r}
+mpg_boxplot <- ggplot(data = mpg, aes(x = class, fill = class)) +
+  geom_bar(width = 1) # width = 1 makes boxes touch
+print(mpg_boxplot)
+```
+
+Drawback with this - labels could overlap if the figure width size is small
+
+## Flipping coordinates
+
+Solution for label overlap
+
+```{r}
+mpg_boxplot + coord_flip()
+```
+
+## Coxcomb plots
+
+Polar coordinates: express location as **angle** and **magnitude** from the origin.
+
+```{r}
+mpg_boxplot + coord_polar()
+```
+
+## Temperature data for Ann Arbor, MI
+
+```{r}
+aatemp <- read_csv("data/ann_arbor_weather.csv.gz")
+```
+
+## Plotting temperature vs. time
+
+```{r}
+ggplot(data = aatemp, aes(x = DATE, y = TMAX)) +
+  geom_line()
+```
+
+## Seasonal effects
+
+We can see some variation in temperature over the year. What exactly is the **seasonal effect** of temperature? (Consistent variation over periods of time)
+```{r}
+# remember: tables are LISTS of VECTORS:
+aatemp$month <- month(aatemp$DATE)
+ggplot(data = aatemp, aes(x = factor(month), y = TMAX)) +
+  geom_violin(aes(fill = factor(month)))
+```
+
+## Wrapping around using polar coordinates
+
+```{r polar}
+ggplot(data = aatemp, aes(x = factor(month), y = TMAX)) +
+  geom_violin(aes(fill = factor(month))) +
+  coord_polar()
+```
+
+
+## Temp difference from one day to next
+
+```{r}
+v = c(2, 4, 6, 7)
+print(v)
+diff(v)
+```
+
+```{r}
+temp_diff <- diff(aatemp$TMAX)
+length(temp_diff)
+dim(aatemp)
+aatemp$temp_diff <- abs(c(NA, temp_diff))
+```
+
+## Distributon of differences
+```{r}
+ggplot(data = aatemp, aes(x = temp_diff)) + geom_bar()
+```
+
+## Plotting when large jumps occur during the year
+
+Let's define a large jump in maximum temperature as being when one day is more than 10 degrees different than the subsequent day.
+
+```{r}
+ggplot(data = filter(aatemp, temp_diff > 10), aes(x = yday(DATE))) +
+  geom_histogram() + coord_polar()
+```
+
+## Other misceallaneous `ggplot` items
+
+* Several other coordinate systems possible, in particular for representing geographic data.
+* We saw using the `position` argument to jitter data. Other geometries have more options with jitter. See R documentation.
+* We'll revisit more with labels, themes, and other presentation later in future classes.
+
