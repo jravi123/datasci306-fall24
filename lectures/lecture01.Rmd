@@ -123,7 +123,11 @@ You can import the GitHub class repository into your workspace by selecting the 
 
 <img src='images/git-import.png' width='600' />
 
-However, if you are working with the shared workspace (that I'll use from next week), you do not need to import from GitHub. However, make sure you save a permanent copy of the files you change as every file you open from the shared workspace will be temporarily saved on your account and will not be available for the next time unless you make it permanent by clicking on the relevant button.
+However, if you are working with the shared workspace (that I'll use from next week), you do not need to import from GitHub. 
+
+**However, make sure you make a permanent copy of the project before you start making edits (especially the homework project) as every file you open from the shared workspace will be temporarily saved on your account and will not be available for the next time unless you make a permanent copy of the project in your account by clicking on the relevant button as shown below**
+
+<img src='images/temp-copy.png' width=600 />
 
 
 ## Some basic POSIX CLI commands

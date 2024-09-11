@@ -62,7 +62,7 @@ Note: Note how the lengths of the columns is made the same for both tibble an da
 
 ## Revisiting the `pipe` operator
 
-<img src='images/pipe_operator.jpeg' width=900px />
+<img src='images/pipe_operator.jpeg' width=500px />
 
 
 ## Getting several columns at once
@@ -223,11 +223,12 @@ colnames(aatemp3)
 ## Using helper functions
 
 Recall a $Z$-score is defined by:
-$$Z = \frac{X - \bar X}{\hat \sigma}$$
+$$Z = \frac{X - \bar X}{\sigma}$$
 
 ```{r}
 aatemp3 <- filter(aatemp3, !is.na(tdiff_abs))
-aatemp3 <- mutate(aatemp3, z = (tdiff_abs - mean(tdiff_abs)) / sd(tdiff_abs))
+aatemp3 <- mutate(aatemp3, 
+                  z = (tdiff_abs - mean(tdiff_abs)) / sd(tdiff_abs))
 ggplot(aatemp3, aes(x = z)) + geom_histogram()
 ```
 
@@ -360,6 +361,9 @@ In the past, we would use the summarize variations: `summarize_at`, `summarize_i
 
 ## Exercise
 
+For the `mpg` data, compute the mean `hwy` value, median `cty` value and also find the ratio of variance between `hwy` and `cty`
+
+
 ```{r summary, exercise = TRUE}
 
 ```
@@ -407,3 +411,6 @@ mpg |> distinct(manufacturer)
 ```
 
 
+## Next class
+
+More on using dplyr and ggplot

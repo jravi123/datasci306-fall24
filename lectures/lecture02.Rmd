@@ -483,8 +483,8 @@ To find how many missing values are present in the category column
 is.na(storms$category) |> table()
 ```
 
-## `homework/example-homework.Rmd`
+## homework
 
-Using an example homework file, we'll answer a few questions and prepare our HW for submission.
+Every homework will be released as a separate posit project. Be sure to first make a permanent copy of the project before you start working on it. 
 
-After running all code, it turns the markdown into a web page (`example-homework.Rmd` => `example-homework.html`)
+
