@@ -1,0 +1,473 @@
+---
+title: "DATASCI 306: Lecture 7"
+subtitle: "Advanced dplyr functions"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(nycflights13)
+library(lubridate) # install.packages("lubridate") if you don't have this
+aatemp <- read_csv("data/ann_arbor_weather.csv.gz")
+```
+
+## Today's topic
+ * using parse_number function
+ * working with user defined functions
+ * more hands-on practice
+ 
+## using `parse_number`
+If a string has a mix of numbers and other characters, parse_number will only pull the number part. Very versatile function to use in many situations
+
+```{r}
+
+x <- c("$1,234", "USD 3,513", "59%")
+parse_number(x)
+```
+
+## More problem solving
+On average which 3 months have the maximum delay in the flight data?
+
+```{r}
+flights |>
+    filter(!is.na(dep_delay)) |>
+    group_by(month) |>
+    summarize(mean_delay = sum(dep_delay)/n()) |>
+    slice_max(mean_delay, n = 3)
+```
+
+Another way of getting it
+
+```{r}
+flights |>
+    filter(!is.na(dep_delay)) |>
+    group_by(month) |>
+    summarize(mean_delay = sum(dep_delay)/n()) |>
+    arrange(desc(mean_delay)) |>
+    head(3)
+```
+
+## using `cut` function
+
+When you want to convert a continuous variable to categorical;
+
+```{r}
+
+x <- c(1, 2, 5, 10, 15, 20)
+cut(x, breaks = c(0, 5, 10, 15, 20))
+```
+
+With labels
+
+```{r}
+cut(x, 
+  breaks = c(0, 5, 10, 15, 20), 
+  labels = c("sm", "md", "lg", "xl")
+)
+```
+## apply the `cut` function
+
+Mutate a new column called 'Grade' that marks as 'Pass' for students with a score above 70, 'Fail' otherwise
+
+```{r ex-1, exercise = T}
+scores <- data.frame(
+  student = c("Alice", "Bob", "Charlie", "David", "Emily", "Frank"),
+  score = c(75, 92, 68, 85, 50, 98)
+)
+
+scores
+```
+
+```{r ex-1-solution}
+scores <- data.frame(
+  student = c("Alice", "Bob", "Charlie", "David", "Emily", "Frank"),
+  score = c(75, 92, 68, 85, 50, 98)
+)
+
+scores |> mutate(grade = cut(score, breaks = c(0, 70, 100), labels = c('Fail', 'Pass')))
+
+```
+
+
+## More on NA handling
+
+```{r}
+x = tibble(
+        col1 = c(1:10, NA),
+        col2 = c(10:15, NA, NA, NA, NA, NA)
+    )
+x
+   
+```
+
+Using `na.omit` to filter non NA values on the entire dataframe
+
+```{r}
+na.omit(x)
+```
+
+You can also use it on a column
+
+```{r}
+na.omit(x$col2)
+```
+
+Using is.na gives
+
+```{r}
+is.na(x$col2)
+```
+
+Alternative way of finding mean of non na values
+
+```{r}
+mean(na.omit(x))
+```
+
+## Practice
+
+Get all cancelled flights; if dep_time is NA then that flight is cancelled
+
+```{r}
+flights |> filter(is.na(dep_time)) |> select(sched_dep_time, dep_time, everything()) |> print()
+```
+
+## Mean of logicals
+
+```{r}
+mean(c(T, T, F, F))
+```
+
+## Proportion of cancelled flights
+
+How does the proportion of cancelled flights varies over the course of the day?
+
+```{r}
+flights |>
+  group_by(hour = sched_dep_time %/% 100) |>
+  summarize(prop_cancelled = mean(is.na(dep_time)), n = n()) |>
+  filter(hour > 1) |>
+  ggplot(aes(x = hour, y = prop_cancelled)) +
+  geom_line() + 
+  geom_point(aes(size = n))
+```
+
+
+## Functions: mini-programs
+
+Functions are miniature programs that take inputs and return a value.
+
+* Reuse the same set of steps in different contexts (variables, data sets)
+* Express key steps that should be done performed later (delayed computation)
+
+## Avoding repetition: groups
+
+If we want to repeat the same computation within groups we can avoid repetition (always our goal!) using `group_by`:
+
+```{r}
+aatemp |>
+  group_by(year(DATE)) |>
+  summarize(mean(TMAX - TMIN))
+```
+
+## Correlation
+
+In the previous grouping example, we used the same variables in each group to make our computation. Sometimes we want to repeat the same computation on different variables.
+
+One way of defining the *correlation coefficient* for two variables is:
+
+$$r_{xy} = \frac{1}{n - 1} \sum_{i=1}^n \frac{x_i - \bar x}{s_x} \frac{y_i - \bar x}{s_y}$$
+In other words, *the average product of Z-scores*
+
+```{r}
+aatemp |>
+  mutate(zx = (TMAX - mean(TMAX)) / sd(TMAX),
+         zy = (TMIN - mean(TMIN)) / sd(TMIN),
+         zz = zx * zy) |>
+  summarize(sum(zz) / (length(zz) - 1))
+
+# validate
+summarize(aatemp, cor(TMAX, TMIN))
+```
+
+But lots of duplication!
+
+## Writing our own functions
+
+```{r eval = F}
+function_name <- function(required_argument, optional_argument = 0, ...) {
+  # function body
+  return(a_value)
+}
+```
+
+(NB: The last line is automatically returned.)
+
+## Exercise
+
+Write an R function to transform a vector into a $Z$-score
+```{r scale, exercise = TRUE}
+x <- c(-1, 2, 1.1)
+```
+
+```{r scale-solution}
+z_score <- function(input) {
+  (input - mean(input)) / sd(input)
+}
+
+z_score(x)
+```
+
+
+(we can use `scale` function instead of computing this ourselves)
+
+## Revisiting correlation:
+
+```{r}
+
+z_score <- function(input) {
+  (input - mean(input)) / sd(input)
+}
+
+aatemp |>
+  mutate(zx = z_score(TMAX),
+         zy = z_score(TMIN),
+         zz = zx * zy) |>
+  summarize(sum(zz) / (length(zz) - 1))
+```
+
+
+## Common use case: mutations and summaries
+
+Suppose we want to median center and scale in terms of the IQR. We are going to use this functionality on the original data, but also within years.
+
+```{r}
+myscale <- function(x) {
+  (x - median(x)) / IQR(x)
+}
+```
+```{r}
+mutate(aatemp, TMAX_myscale = myscale(TMAX)) |>
+  ggplot(aes(x = factor(year(DATE)), y = TMAX_myscale)) +
+    geom_violin()
+```
+
+
+```{r}
+aatemp |> group_by(year(DATE)) |>
+  mutate(TMAX_scaled = myscale(TMAX)) |>
+  ggplot(aes(x = factor(year(DATE)), y = TMAX_scaled))+
+    geom_violin()
+```
+
+
+
+## Exericse: Converting all Fahrenheit to Celsius
+
+We have both `TMAX` and `TMIN` in Fahrenheit.
+
+```{r}
+select(aatemp, TMAX, TMIN)
+```
+
+Let's convert to Celsius ($C = (F - 32) \cdot 5/9$) by first creating a function.
+
+```{r celsius, exercise = TRUE}
+
+```
+
+## From duplicated code to clean code
+
+How many interquartile ranges above or below the median? (Similar to a Z-score)
+
+```{r}
+mutate(aatemp, TMAX_scale_IQR = (TMAX - median(TMAX)) / IQR(TMAX),
+               TMIN_scale_IQR = (TMIN - median(TMIN)) / IQR(TMIN)) |>
+  group_by(abs(TMAX_scale_IQR) > 1.5, abs(TMIN_scale_IQR) > 1.5) |>
+  summarize(n())
+```
+
+## Writing our own functions: capturing common behavior
+
+```{r}
+scale_IQR <- function(x) {
+  (x - median(x)) / IQR(x)
+}
+
+temp_summary <- function(tbl) {
+  group_by(tbl, abs(TMAX_scale_IQR) > 1.5, abs(TMIN_scale_IQR) > 1.5) |>
+  summarize(n())
+}
+
+mutate(aatemp, TMAX_scale_IQR = scale_IQR(TMAX), 
+               TMIN_scale_IQR = scale_IQR(TMIN)) |>
+  temp_summary()
+```
+
+## Even better: `across`
+
+We're still calling the function twice. `across` lets us pass in a
+**function** as an argument!
+
+If we give one function, it uses the original column names:
+
+```{r}
+mutate(aatemp, across(c("TMAX", "TMIN"), scale_IQR)) |>
+    group_by(abs(TMAX) > 1.5, abs(TMIN) > 1.5) |>
+    summarize(n())
+```
+
+## Exercise
+
+**Skew** measures the relative amount of variation above and below the center of distribution. The sample **coefficient of skew** is given by 
+
+$$ \frac{(1/n) \sum_{i=1}^n (X_i - \bar X_n)^3}{\hat \sigma^3}$$
+where $\hat \sigma$ is the sample standard deviation.
+
+Write a function to compute the coefficient of skew and use `across` to compute it for `TMAX` and `TMIN` in the `aatemp` data set.
+
+```{r coefskew, exercise = TRUE}
+
+```
+
+```{r coefskew-solution}
+skew <- function(x) {
+   mean((x - mean(x))^3) / sd(x)^3
+}
+
+
+summarize(aatemp, across(c("TMAX", "TMIN"), skew))
+```
+
+## Return values
+
+R functions can return (at most) one object. Can we return several items? Yes: using vectors, lists, and tables.
+
+```{r}
+first_last <- function(x) { c(x[1], x[length(x)]) }
+first_last(LETTERS)
+
+mean_range <- function(x) { list(mean = mean(x), range = range(x))}
+mr <- mean_range(rnorm(100)) # 100 random values
+mr$mean
+mr$range
+
+numbered_table <- function(x) { 
+  tibble(idx = seq_along(x), main_column = x)
+}
+numbered_table(letters)
+```
+
+
+
+## Predicates
+
+A **predicate** is a function that returns `TRUE` or `FALSE`.
+
+For example:
+```{r}
+no_missing <- function(x) {
+  !(any(is.na(x)))
+}
+
+no_missing(c(2,3,44))
+no_missing(c(7, NA, 122))
+```
+
+## Selecting columns with predicates
+
+We have seen several predicates used already: `is.numeric` or `is.character` in selecting columns. We can also use our own predicates.
+
+```{r}
+select(aatemp, where(no_missing)) |> colnames()
+```
+
+## More on anonymous functions
+
+Sometimes we want to write short little functions that only get used once. We call these **anonymous functions** like this:
+
+```{r}
+select(aatemp, where(function(x) { !any(is.na(x)) })) |> ncol()
+```
+
+## Tidyverse anonymous function short hand
+
+Many of the tidyverse functions support using formulas to indicate an anonymous function:
+
+```{r}
+select(aatemp, where(~ !any(is.na(.x)))) |> ncol()
+```
+
+>* `~` starts a formula
+>* `.x` is the argument to the function
+
+Another form using backslash
+
+```{r}
+select(aatemp, where(\(x) !any(is.na(x)))) |> ncol()
+```
+
+We'll see more of this form when we discuss iteration.
+
+**More function short hand**
+
+```{r}
+summarize_at(aatemp, c("TMAX", "TMIN"), ~ mean((.x - mean(.x))^3) / sd(.x)^3)
+```
+
+## Functions with optional arguments
+
+Recall that R functions with `argument = value` are optional. We can write functions this way too.
+
+```{r}
+
+multSomething <- function(x, to_mult = 1) {
+  x * to_mult
+}
+
+multSomething(10)
+multSomething(10, 2)
+multSomething(to_mult = 2, 10)
+
+mutate(aatemp, TMAX1 = multSomething(TMAX),
+               TMAX2 = multSomething(TMAX, 2)) |> 
+  select(TMAX, TMAX1, TMAX2)
+```
+
+## Indirect invocation
+
+```{r}
+mutate(aatemp, across(c("TMAX", "TMIN"), \(x) multSomething(x, to_mult = 0))) |>
+  select(TMAX, TMIN)
+```
+
+
+
+## Exercise
+
+Write a function `center` that **takes a function** as an argument computes
+$$x - f(x)$$
+Make the default argument be `mean`, but demonstrate using `median` centering as well.
+
+```{r higher-order, exercise = TRUE}
+myvec <- c(203404, 292, 1010, 3, -10930, 39)
+```
+
+```{r higher-order-solution}
+myvec <- c(203404, 292, 1010, 3, -10930, 39)
+
+center <- function(x, f = mean) {
+  x - f(x)
+}
+
+center(myvec)
+center(myvec, mean)
+center(myvec, f = median)
+```
+

@@ -1,5 +1,5 @@
 ---
-title: "Stats 306: Lecture 4"
+title: "DATASCI 306: Lecture 4"
 subtitle: "Graphics: Facets, Coordinate Systems"
 output: 
   learnr::tutorial:

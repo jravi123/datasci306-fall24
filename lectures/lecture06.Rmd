@@ -1,0 +1,356 @@
+---
+title: "DATASCI 306: Lecture 6"
+subtitle: "More Grouping and Summaries; Functions"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(nycflights13)
+library(lubridate) # install.packages("lubridate") if you don't have this
+aatemp <- read_csv("data/ann_arbor_weather.csv.gz")
+```
+
+## Review: `mutate`
+
+* `mutate`: Takes a table and returns a new table with columns added and/or subtracted
+* `mutate(d, new_col = f(x, y), new_col2 = new_col1 + 1, old_col = NULL)`
+* Can use functions that summarize, e.g., `mutate(d, x_centered = x - mean(x))`
+
+## Today we will learn `groups and summaries`
+
+* We often want to **partition** our data into smaller groups
+* Things like finding **conditional means** or **conditional medians**
+* `group_by` takes one or more grouping factors and creates a grouped table
+* `summarize` computes group level summaries
+* We'll see that `mutate` operates within groups, which can be quite helpful
+
+## `nrow` function
+
+Before we get started, let's look at a function to quickly count the rows in a table.
+
+```{r}
+mpg |> nrow()
+```
+
+Compare this with `dim`
+
+```{r}
+dim(mpg)
+```
+## Grouping
+
+Often we want to break data out across categories and compute summaries within each.
+
+```{r}
+flights |> group_by(carrier) |>
+  summarize(avg_dep_delay = mean(dep_delay, na.rm = T), total_flights = n())
+```
+Verify the slice
+
+```{r ex-1, exercise = T}
+flights |> 
+  filter(carrier == '9E') |> 
+  summarize(mean_delay = mean(dep_delay, na.rm = T), n = n())
+```
+
+## Using count
+Many a times just using `count` function is enough instead of using `group_by` and summarize with `n()` function
+
+```{r}
+flights |> group_by(carrier) |> summarize(n = n())
+```
+
+The same result can be achieved by
+
+```{r}
+flights |> count(carrier)
+```
+## The bar_chart 
+
+We know that the bar chart does this count automatically for us
+
+
+
+```{r}
+flights |> ggplot(aes(x = origin, fill = origin)) + geom_bar()
+```
+
+The above chart is same as
+
+```{r}
+flights |> count(origin) |> ggplot(aes(x = origin, y = n, fill = origin)) + geom_col()
+```
+
+## Inspecting group data
+
+```{r}
+
+carrier_grp <- group_by(flights, carrier)
+nrow(flights) == nrow(carrier_grp)
+
+length(colnames(flights))
+length(colnames(carrier_grp))
+
+group_vars(carrier_grp)
+```
+
+## Grouping by origin and dest
+
+
+```{r}
+flights |>
+  group_by(origin, dest) |>
+  group_vars()
+```
+
+
+```{r}
+flights |> group_by(origin, dest) |>
+  summarize(n = n())
+```
+## Relative frequency chart
+
+Let us find the top 3 destinations in this flights dataset
+
+```{r}
+flights |> count(dest) |> slice_max(n = 3, n) -> top_3
+
+top_3
+```
+
+Now let us find the relative frequencies - to show the top 3 destination distribution from the three origins.
+
+```{r}
+
+flights |> filter(dest %in% c(top_3$dest)) |> ggplot(aes(x = origin, fill = dest)) + geom_bar(position = 'fill')
+```
+
+## Exercise
+
+Using the `mpg` data set, find the manufacturer (`manufacturer`) with the highest mean highway efficiency (`hwy`)
+
+```{r manufacturer-hwy, exercise = TRUE}
+
+```
+
+```{r manufacturer-hwy-solution}
+mpg |> group_by(manufacturer) |> summarize(mean_hwy = mean(hwy)) |> arrange(-mean_hwy)
+```
+
+
+
+
+
+
+## Dropping groups
+
+After every summarize step, a `group var` is removed from the last group
+
+Let us see an example
+
+```{r}
+flights |> group_by(origin, dest) |> summarize(n = n()) |> summarize(n = n())
+```
+
+What exactly did we get here? Let us analyze
+
+```{r}
+flights |> group_by(origin, dest) -> gp_data 
+
+gp_data |> group_vars()
+
+gp_data |> summarize(n = n()) |> group_vars()
+
+```
+
+
+
+
+
+
+## Useful functions for summaries
+
+* Seen before: `mean`, `median`, `sd`, `min`, `max`
+* Other common statistical measures: `quantile`, `IQR`
+* For boolean/logical columns: `any` and `all` ("or" and "and" across vectors)
+* The functions `n` and a `n_distinct` count units and distinct values
+
+## Some more summaries
+
+```{r}
+flights |> group_by(carrier) |> summarize(n(), n_distinct(dest))
+```
+
+## Temperature data for Ann Arbor, MI
+
+```{r}
+aatemp
+```
+
+## `mutate` to add a column
+
+```{r}
+aatemp_cel <- mutate(aatemp,
+                     TMAX_celsius = (TMAX - 32) * 5/9) |>
+  select(TMAX, TMAX_celsius)
+
+aatemp_cel |> head()
+```
+
+## Centered temperature
+
+```{r}
+mutate(aatemp, TMAX_centered = TMAX - mean(TMAX)) |>
+ ggplot(aes(y = TMAX_centered, x = factor(quarter(DATE)))) +
+    geom_violin() 
+```
+
+## `mutate` and `group_by`
+
+Observe some care when using `mutate` on grouped tables:
+
+```{r}
+group_by(aatemp, quarter(DATE)) |>
+  mutate(TMAX_centered = TMAX - mean(TMAX)) |>
+  ggplot(aes(y = TMAX_centered, x = factor(`quarter(DATE)`))) +
+    geom_violin()
+```
+
+
+
+## Normalizing by monthly averages?
+
+Let's center each observation by it's monthly average that we can understand if
+it was unusual for that time of year.
+
+```{r}
+aat_month_centered <- group_by(aatemp, month(DATE)) |>
+  mutate(TMAX_centered = TMAX - mean(TMAX, na.rm = TRUE)) # mean computed over months
+## verify 
+summarize(aat_month_centered, var(TMAX_centered), sum(TMAX_centered^2) / (n() - 1)) |>
+  head(3)
+```
+
+## Unusual months continued: conversion to ranks
+
+*Ranks* are a useful robust replacement for values that are less susceptible to outliers. Let's rank days by how far they were from their monthly mean.
+
+**Danger**: mutate will operate within months!
+
+```{r}
+mutate(aat_month_centered, r = rank(TMAX_centered)) |> 
+  summarize(min(r), max(r))
+```
+
+## Ungrouping to fix
+
+We need to drop the grouping values so that we can rank across all days.
+
+```{r}
+ungroup(aat_month_centered) |> 
+  mutate(aat_month_centered, r = rank(TMAX_centered)) |>
+  summarize(min(r), max(r))
+```
+
+## Average rank within years
+
+Now that we can rank across all years and months, what year had the highest
+average ranks?
+
+```{r}
+ungroup(aat_month_centered) |> 
+  mutate(aat_month_centered, r = rank(TMAX_centered)) |>
+  group_by(year(DATE)) |>
+  summarize(mean(r)) |>
+  arrange(desc(`mean(r)`))
+```
+
+
+## `rbind` and `cbind`
+
+Take a sequence of vector, matrix or data-frame arguments and combine by rows you use `rbind`
+And to combine them by columns you use `cbind`
+
+```{r}
+t1 <- tibble(x = 1, y = 2)
+t1
+t2 <- tibble(x = 2, y = 4)
+t2
+t <- rbind(t1, t2)
+t
+cbind(t, new_col = c('a', 'b'))
+```
+
+## Applying functions with `across`
+
+You can define your own functions and use that function to apply to specific columns using `across`
+
+Let us say you want to count the length of the string in every character column of the dataframe and create a new column with the string length value. You could do so as shown below:
+
+```{r}
+get_length <- function(x){
+  str_length(x)
+}
+
+storms |> mutate(across(where(is.character), 
+                        get_length, 
+                        .names = 'length_{col}')) |> 
+  head(3)
+```
+
+
+## Practice with everything
+
+Let us look into the flights dataset and find the most delayed flight (highest departure delay) for each day of the year:
+
+```{r}
+library(nycflights13)
+flights |>
+  group_by(year, month, day) |>
+    slice_max(dep_delay)
+```
+
+## 2nd most delayed?
+
+```{r}
+flights |> group_by(year, month, day) |>
+  mutate(rank = min_rank(-dep_delay), .before = 'year') |>
+    filter(rank == 2)
+```
+
+To do this question (easily) we used a new function, min_rank() (see Chapter 15 of the reading). This function takes a vector of numbers and returns their rank:
+
+```{r}
+min_rank(c(5, 1, 3, 10, 15))
+```
+
+## Most commonly delayed carrier
+
+If I create a list of the ten most (departure) delayed flights for each day of the year, which carrier appears most frequently on that list?
+
+```{r}
+flights |> group_by(year, month, day) |>
+  slice_max(n = 10, dep_delay) |> ungroup() |> count(carrier, sort = T)
+```
+
+## Proportion of delayed flights
+We will call a flight delayed if dep_delay is greater an 10 minutes
+
+```{r}
+flights |>
+  filter(!is.na(dep_delay)) |>
+  group_by(carrier) |>
+    summarise(
+      total = n(),
+      delayed = sum(dep_delay > 10),
+      prop = delayed/total
+    ) |> arrange(-prop)
+```
+

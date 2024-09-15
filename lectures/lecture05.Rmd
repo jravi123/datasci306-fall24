@@ -1,5 +1,5 @@
 ---
-title: "Stats 306: Lecture 5"
+title: "DATASCI 306: Lecture 5"
 subtitle: "Tables: Selecting, Filtering; Grouping and Summaries"
 output: 
   learnr::tutorial:

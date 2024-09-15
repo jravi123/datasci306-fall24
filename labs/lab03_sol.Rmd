@@ -1,0 +1,343 @@
+---
+title: "DATASCI 306 Lab3"
+output: 
+  learnr::tutorial:
+    progressive: true
+runtime: shiny_prerendered
+---
+
+<style type="text/css">
+  body{
+  font-size: 14pt;
+}
+</style>
+
+## Set up
+
+- Use the install.packages("<PACKAGE NAME>") command to install packages in R
+- To load a package (already installed) use the library(<PACKAGE NAME>) command
+
+```{r installPackages, echo=FALSE, include=FALSE, message=FALSE}
+# install.packages("tidyverse")
+# install.packages("learnr")
+
+```
+
+```{r setup, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)  # For ggplot2, dplyr
+library(learnr)
+library(dplyr)
+```
+
+
+## Table operations
+
+Today we are going to focus on functions in the `dplyr` package, which is part of the `tidyverse`. 
+The `dplyr` package aims to provide a function for each basic "verb" of data manipulation. 
+Here are some common functions / "verbs" for data manipulation: 
+
+* Rows: 
+    + `filter()`: Select rows based on criteria on column values
+    + `slice()`: choose rows based on locations.
+    + `arrange()`: change the order of the rows.
+* Columns: 
+    + `select()`: Pick and choose columns to include in data.
+    + `pull()`: Select a single column (similar to `data$column`).
+    + `rename()`: Change the name of columns.
+    + `mutate()`: Change the values of columns / creates new columns. 
+* Groups (of rows):
+    + `group_by()`: Creates a group of rows.
+    + `summarise()` or `summarize()`: Calculate summary values for a given group. 
+
+## Selecting, Filtering and Mutating
+
+We are going to look at the `midwest` data again.
+
+```{r}
+head(midwest)
+```
+
+### `select`
+
+If you might like to have the help file for the select function open, run
+
+```{r eval = FALSE}
+?select
+```
+
+in the Console tab.
+
+### Exercise 1 {-}
+
+#### (a) {-}
+
+Use `select` to pick the columns that are related to population counts:
+
+```
+"poptotal"        "popdensity"      "popwhite"        "popblack"        "popamerindian"  
+"popasian"        "popother"        "popadults"       "poppovertyknown"
+```
+
+```{r midwestSelect1, exercise=TRUE}
+
+midwest %>%select(poptotal, popdensity, popwhite, popblack, popamerindian, popasian, popother, popadults, poppovertyknown)
+
+
+```
+
+
+#### (b) {-}
+
+Select everything **except** `PID` and `poptotal`:
+
+```{r midwestSelect2, exercise=TRUE}
+midwest %>%
+  select(-PID, -poptotal)
+
+```
+
+##### (c) {-}
+
+Use the `where` and `is.character` function to select only columns containing strings/character vectors.
+
+```{r midwestSelect3, exercise=TRUE}
+
+midwest %>%
+  select(where(is.character))
+
+```
+
+
+
+### `filter`
+`filter()` allows us to select certain rows. 
+
+Observe the following way to tell if a county is in Michigan:
+
+```{r}
+midwest$state == "MI"
+```
+
+#### Exercise 2 {-}
+
+##### (a) {-}
+
+Use code similar (but not the same as) the above to find all rows for counties in MI
+
+```{r midwestFilter1, exercise=TRUE}
+
+midwest %>%
+  filter(state == "MI")
+
+```
+
+
+You can include more than one condition at a time by adding additional qualifications. 
+
+```{r}
+midwest %>%
+  filter(state == "MI", county == 'WASHTENAW')
+```
+
+##### (b) {-}
+
+Select all counties in Michigan with a `percollege` value greater than 17 (approximately the median in the entire data set).
+
+```{r midwestFilter2, exercise=TRUE}
+
+midwest %>%
+  filter(state == "MI", percollege > 17)
+
+```
+
+Another way to do this filter is to use the "and" operator `&`
+
+```{r}
+midwest %>%
+  filter(state == "MI" & percollege > 16)
+```
+
+There is also an "or" operator `|`.
+
+##### (c) {-}
+
+Use the `|` operator to find rows in either Wisconsin or Ohio.
+
+```{r midwestOrOperator, exercise=TRUE}
+
+midwest %>%
+  filter(state == "WI" | state == "OH")
+
+```
+
+When filtering rows for many values in the same column, the `%in%` operator can be useful. Here's an example of it's usage
+
+```{r}
+c("WI", "MI", "OH", "OH", "IA") %in% c("WI", "OH")
+```
+
+##### (d) {-}
+
+Use the `%in%` operator to repeat the previous selection of counties in Wisconsin or Ohio.
+
+```{r midwestinoperator, exercise=TRUE}
+
+midwest %>%
+  filter(state %in% c("WI", "OH"))
+
+```
+
+### Putting `filter` and `select` together
+
+##### (e) {-}
+
+Make a table using all the rows from Wisconsin and Ohio but only the columns `PID` and `area`
+
+```{r midwestfilterselect, exercise = TRUE}
+
+midwest %>%
+  filter(state %in% c("WI", "OH")) %>%
+  select(PID, area)
+
+```
+
+## Mutate
+`mutate()` can be used to either create or modify a column in a dataset. 
+We can pipe multiple functions together. 
+
+Try running the following code:
+```{r mutate1, exercise=TRUE}
+midwest %>%
+  filter(state == 'MI') %>%
+  mutate(school = ifelse(county == "WASHTENAW", "GO BLUE!!!", "OTHER")) %>%
+  mutate(county == tolower(county)) %>%
+  select(state, county, school) %>%
+  tail()
+```
+
+#### Exercise 3 {-}
+
+##### (a) {-}
+
+Create a new column finds the number of non-adults per county (i.e., the difference between `poptotal` and `popadults`):
+
+```{r mutate2, exercise=TRUE}
+midwest %>%
+  mutate(non_adults = poptotal - popadults) %>%
+  select(state, county, poptotal, popadults, non_adults) %>%
+  head()
+
+```
+
+##### (b) {-}
+
+Mutate can make more than one column. Using only one call to `mutate`, create a `childrendensity` by dividing the number of children by area.
+
+```{r mutate3, exercise=TRUE}
+
+midwest %>%
+  mutate(non_adults = poptotal - popadults,
+         childrendensity = non_adults / area) %>%
+  select(state, county, non_adults, area, childrendensity) %>%
+  head()
+
+```
+
+We can use `arrange()` to order the columns of the data. 
+
+```{r arrange1, exercise=TRUE}
+midwest %>%
+  select(state, county) %>%
+  arrange(desc(state), county) %>%
+  head()
+```
+
+##### (c) {-}
+
+Find the county with the highest population (`poptotal`) in the data set:
+
+```{r arrange2, exercise=TRUE}
+
+midwest %>%
+  arrange(desc(poptotal)) %>%
+  select(state, county, poptotal) %>%
+  head(1)
+
+```
+
+
+Another useful tool is `slice()`. This function allows us to select certain rows. There are a few versions of this that each give different results. See `?slice` for more details.
+
+The previous example could have been written as:
+
+```{r slice1, exercise=TRUE}
+midwest %>%
+  slice_max(poptotal)
+```
+
+## Grouping and Summarizing
+
+`group_by()` helps us create groups. 
+The following code will get the maximum population county for each state in the dataset. 
+
+```{r groupby1, exercise=TRUE}
+midwest %>%
+  group_by(state) %>%
+  slice_max(poptotal)
+```
+
+#### Exercise 4 {-}
+
+##### (a) {-}
+
+Use `group_by` and `slice_max` to find the largest metro and non-metro counties (`inmetro`):
+
+```{r groupbymetro, exercise=TRUE}
+
+midwest %>%
+  group_by(inmetro) %>%
+  slice_max(poptotal) %>%
+  select(inmetro, state, county, poptotal)
+
+```
+
+
+`summarize()` (or equivalently, `summarise()`) is a function that's not particularly useful on it's own, but when combined with `group_by()` it can be very useful.
+The following code counts the number of counties in each state
+
+```{r summarize1, exercise=TRUE}
+midwest %>%
+  group_by(state) %>%
+  summarize(n_counties = n()) %>%
+  arrange(-n_counties)
+```
+
+##### (b) {-}
+
+Use `group_by()` and `summarize()` to get the total population in each state (hint, we want to *sum* up the `poptotal` column). Then, arrange the states so that states with the smallest population comes first.
+
+```{r groupExercise, exercise=TRUE}
+
+midwest %>%
+  group_by(state) %>%
+  summarize(total_population = sum(poptotal)) %>%
+  arrange(total_population)
+
+```
+
+##### (c) {-}
+
+**BONUS** Modify your previous solution to also calculate the percentage of the population that is White, Black, and Asian. 
+
+```{r groupExercisebonus, exercise=TRUE}
+
+midwest %>%
+  group_by(state) %>%
+  summarize(total_population = sum(poptotal),
+            pct_white = sum(popwhite) / total_population * 100,
+            pct_black = sum(popblack) / total_population * 100,
+            pct_asian = sum(popasian) / total_population * 100) %>%
+  arrange(total_population)
+
+```
