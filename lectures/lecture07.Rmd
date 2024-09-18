@@ -75,7 +75,8 @@ cut(x,
 
 Mutate a new column called 'Grade' that marks as 'Pass' for students with a score above 70, 'Fail' otherwise
 
-```{r ex-1, exercise = T}
+```{r ex-1, exercise = TRUE}
+
 scores <- data.frame(
   student = c("Alice", "Bob", "Charlie", "David", "Emily", "Frank"),
   score = c(75, 92, 68, 85, 50, 98)
@@ -127,14 +128,17 @@ is.na(x$col2)
 Alternative way of finding mean of non na values
 
 ```{r}
-mean(na.omit(x))
+mean(na.omit(x$col2))
 ```
 
 ## Practice
 
 Get all cancelled flights; if dep_time is NA then that flight is cancelled
+```{r ex-2, exercise = TRUE}
+flights
+```
 
-```{r}
+```{r ex-2-solution}
 flights |> filter(is.na(dep_time)) |> select(sched_dep_time, dep_time, everything()) |> print()
 ```
 
@@ -225,7 +229,7 @@ z_score(x)
 ```
 
 
-(we can use `scale` function instead of computing this ourselves)
+(NB: We can use `scale` function instead of computing this ourselves. We are writing out own function to get some practice with functions)
 
 ## Revisiting correlation:
 
@@ -268,19 +272,7 @@ aatemp |> group_by(year(DATE)) |>
 
 
 
-## Exericse: Converting all Fahrenheit to Celsius
 
-We have both `TMAX` and `TMIN` in Fahrenheit.
-
-```{r}
-select(aatemp, TMAX, TMIN)
-```
-
-Let's convert to Celsius ($C = (F - 32) \cdot 5/9$) by first creating a function.
-
-```{r celsius, exercise = TRUE}
-
-```
 
 ## From duplicated code to clean code
 
@@ -388,38 +380,7 @@ We have seen several predicates used already: `is.numeric` or `is.character` in 
 select(aatemp, where(no_missing)) |> colnames()
 ```
 
-## More on anonymous functions
 
-Sometimes we want to write short little functions that only get used once. We call these **anonymous functions** like this:
-
-```{r}
-select(aatemp, where(function(x) { !any(is.na(x)) })) |> ncol()
-```
-
-## Tidyverse anonymous function short hand
-
-Many of the tidyverse functions support using formulas to indicate an anonymous function:
-
-```{r}
-select(aatemp, where(~ !any(is.na(.x)))) |> ncol()
-```
-
->* `~` starts a formula
->* `.x` is the argument to the function
-
-Another form using backslash
-
-```{r}
-select(aatemp, where(\(x) !any(is.na(x)))) |> ncol()
-```
-
-We'll see more of this form when we discuss iteration.
-
-**More function short hand**
-
-```{r}
-summarize_at(aatemp, c("TMAX", "TMIN"), ~ mean((.x - mean(.x))^3) / sd(.x)^3)
-```
 
 ## Functions with optional arguments
 

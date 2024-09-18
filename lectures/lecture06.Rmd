@@ -72,6 +72,8 @@ The same result can be achieved by
 ```{r}
 flights |> count(carrier)
 ```
+
+
 ## The bar_chart 
 
 We know that the bar chart does this count automatically for us
@@ -87,6 +89,14 @@ The above chart is same as
 ```{r}
 flights |> count(origin) |> ggplot(aes(x = origin, y = n, fill = origin)) + geom_col()
 ```
+
+Yet another version
+
+
+```{r}
+flights |> count(origin) |> ggplot(aes(x = origin, y = n, fill = origin)) + geom_bar(stat = 'identity')
+```
+
 
 ## Inspecting group data
 
@@ -341,7 +351,7 @@ flights |> group_by(year, month, day) |>
 ```
 
 ## Proportion of delayed flights
-We will call a flight delayed if dep_delay is greater an 10 minutes
+We will call a flight delayed if dep_delay is greater than 10 minutes
 
 ```{r}
 flights |>
