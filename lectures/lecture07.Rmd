@@ -186,7 +186,7 @@ In the previous grouping example, we used the same variables in each group to ma
 
 One way of defining the *correlation coefficient* for two variables is:
 
-$$r_{xy} = \frac{1}{n - 1} \sum_{i=1}^n \frac{x_i - \bar x}{s_x} \frac{y_i - \bar x}{s_y}$$
+$$r_{xy} = \frac{1}{n - 1} \sum_{i=1}^n \frac{x_i - \bar x}{s_x} \frac{y_i - \bar y}{s_y}$$
 In other words, *the average product of Z-scores*
 
 ```{r}
