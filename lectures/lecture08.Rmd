@@ -44,6 +44,12 @@ The book version:
 * Use what you learn to refine your questions and/or generate new questions.
 (Return to #1).
 
+[EDA as per NIST](https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm)
+
+[Goals of EDA](https://www.itl.nist.gov/div898/handbook/eda/section1/eda14.htm)
+
+## Typical Questions
+
 Typical questions useful for making discoveries within your data:
 
 * What type of variation occurs within my variables?
@@ -51,7 +57,7 @@ Typical questions useful for making discoveries within your data:
 
 ## Data Understanding
 
-Before you start with visualization, first step is understand the data!
+Before you start with visualization, first step is to have a cursory understanding of the data!
 
 * Import and View Data: Load the data and examine the first few rows to understand its structure.
 * Data Types and Structure: Identify data types (numerical, categorical, etc.) and check for any inconsistencies.
@@ -355,9 +361,6 @@ diamonds |>
   select(where(is.numeric)) |>
   pairs(col = diamonds$cut)
 ```
-
-
-
 
 
 

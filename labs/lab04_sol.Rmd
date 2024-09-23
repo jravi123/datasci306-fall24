@@ -1,0 +1,485 @@
+---
+title: "DATASCI 306: Lab 4"
+subtitle: "Data Manipulation"
+author: "Your Name"
+output: 
+  slidy_presentation:
+    incremental: true
+runtime: shiny_prerendered
+---
+
+```{r installPackages, echo=FALSE, include=FALSE, message=FALSE}
+# This just checks if students need to install some packages that they might 
+# not have.
+if (!require(gapminder)) install.packages("gapminder", repos = "http://cran.us.r-project.org")
+
+```
+
+```{r setup, echo=FALSE, include=FALSE}
+library(learnr)     # For interactive exercises
+library(tidyverse)  # For ggplot2, dplyr
+library(gapminder)
+```
+
+## Today's Content
+
+> -   mutate, transmute, rename
+> -   group_by, summarize
+> -   pipe operator
+> -   writing custom
+
+## Mutate
+
+We can use `mutate` to add new variables and preserve existing ones.
+We will look at a few examples.
+Here we use the dataset iris.
+
+```{r iris}
+head(iris)
+```
+
+## Basics of Mutate
+
+> -   Create a Sepal Area column that equals to `Sepal Width * Sepal Length`
+
+```{r}
+iris1 <- mutate(iris, Sepal.Area = Sepal.Width * Sepal.Length)
+head(iris1)
+```
+
+> -   Make this new column before Sepal Length
+
+```{r}
+iris1 <- mutate(iris, Sepal.Area = Sepal.Width * Sepal.Length,
+                      .before = Sepal.Length)
+head(iris1)
+```
+
+There are more useful arguments:
+
+> -   `.keep = c("all", "used", "unused", "none")`
+> -   `.before` and `.after` - optionally specifies the position of the new column
+
+```{r mutate, exercise=T}
+?mutate
+```
+
+## Creating Multiple Columns
+
+You can create multiple columns, some of which may depend on those being created at the same time.
+
+```{r}
+## Create Sepal Area column as Sepal Width * Sepal Legth
+## Update this area by scaling it by a factor of 10
+iris1 <- mutate(iris, Sepal.Area = Sepal.Width * Sepal.Length,
+               Scaled.Sepal.Area = Sepal.Area * 10)
+head(iris1)
+```
+
+If we only want to keep the new columns and those columns used to create the new columns in the resulting dataset:
+
+```{r}
+iris1 <- mutate(iris, Sepal.Area = Sepal.Width * Sepal.Length,
+               Scaled.Sepal.Area = Sepal.Area*10,
+               .keep = "used")
+head(iris1)
+```
+
+*Note*: We can use mutate to delete a column by setting the column name to NULL
+
+```{r}
+## Remove Species column
+iris1 <- mutate(iris, Species = NULL)
+head(iris1)
+```
+
+## Using Functions
+
+> -   We can use function `row_number()` to get row id.
+> -   Use function `toupper()` to convert characters to upper cases.
+
+```{r}
+iris1 <- mutate(iris, ID = row_number(),
+                Species.Upper = toupper(Species))
+head(iris1)
+```
+
+> -   Use `lag()` and `lead()` to get previous and later rows respectively.
+
+```{r}
+iris1 <- mutate(iris, previous = lag(Sepal.Length),
+                      future = lead(Sepal.Length))
+head(iris1)
+```
+
+> -   Use `case_when()` to create a conditional variable, `Size`: if `Sepal Length` is less than the average, assign the value "small", if it is greater than the average, assign "large", else assign "medium".
+
+```{r}
+iris1 <- mutate(iris, Size = case_when(
+                 Sepal.Length < mean(Sepal.Length) ~ "small",
+                 Sepal.Length > mean(Sepal.Length) ~ "large",
+                   TRUE ~ "medium")
+                   )
+head(iris1)
+```
+
+\~ indicates the start of the formula - anonymous function - (which needs to return a value) to be executed if the preceding condition is `TRUE`, in this case a simple string.
+
+Like an if statement, the arguments are evaluated in order, so you must proceed from the most specific to the most general.
+For example, this won't work:
+
+```{r}
+x <- 1:50
+case_when(
+  TRUE ~ as.character(x),
+  x %%  5 == 0 ~ "fizz",
+  x %%  7 == 0 ~ "buzz",
+  x %% 35 == 0 ~ "fizz buzz"
+)
+```
+
+Let's try replicating the above with our own function:
+
+```{r custom_function}
+eval.sepal.length <- function(sepal_length, mean_length) {
+  if (sepal_length < mean_length) {
+    return("small")
+  } else if (sepal_length > mean_length) {
+    return("large")
+  } else {
+    return("medium")
+  }
+}
+```
+
+```{r}
+  iris1 |>
+  mutate(mean = mean(Sepal.Length)) |>
+  rowwise() |> 
+  mutate(Size = eval.sepal.length(Sepal.Length, mean))
+```
+
+We needed to use `rowwise` for this example since such simple functions can only be evaluated one row at the time, unlike `dplyr`'s `case_when`.
+
+## Mutate Multiple Columns
+
+```{r}
+iris1 <- mutate(iris, across(starts_with("Sepal"), ~ . / 10)) 
+head(iris1)
+```
+
+Breaking down the syntax above:
+
+-   across: specifies a set of columns to mutate
+-   \~ indicates the start of a formula to apply across several columns
+-   . is a dummy variable (a *placeholder*) standing in for each column: it represents the argument passed to the nested `across` function by the outer `mutate` function (in this case).
+
+## transmute
+
+`transmute` works exactly like `mutate`, the only difference being that only newly created columns will be retained in our new dataset (tibble).
+It is exactly the same as setting .keep = "none".
+
+We can create Sepal Area and Scaled Sepal Area columns as a separate dataset
+
+```{r}
+iris2 <- transmute(iris, Sepal.Area = Sepal.Width * Sepal.Length,
+               Scaled.Sepal.Area = Sepal.Area*10)
+head(iris2)
+```
+
+Alternatively, we can create Sepal Area and Scaled Sepal Area columns as a separate dataset using mutate
+
+```{r}
+iris3 <- mutate(iris, Sepal.Area = Sepal.Width * Sepal.Length,
+               Scaled.Sepal.Area = Sepal.Area*10,
+               .keep = "none")
+head(iris3)
+```
+
+We can check using `dplyr`'s `all.equal` function to compare the two datasets.
+
+```{r}
+all.equal(iris2, iris3)
+```
+
+## Rename
+
+We use `rename` to rename existing column names.
+
+dots(.) are not recommended for variable names, we want to rename all columns names in the iris dataset by replacing .
+with \_
+
+```{r}
+iris2 <- rename(iris, sepal_length = Sepal.Length,
+                      sepal_width = Sepal.Width,
+                      petal_length = Petal.Length,
+                      petal_width = Petal.Width)
+head(iris2)
+```
+
+We have many repetitive codes above.
+We can also use `rename_with()` to apply a (string) function to all columns by default or a specific subset.
+
+```{r}
+iris2 <- rename_with(iris, ~ str_replace(., pattern="\\.", replacement = "_"))
+head(iris2)
+```
+
+> -   For all the columns in iris, we apply the function `str_replace()`.
+> -   \~ again indicates the start of a formula which needs to return a calue
+> -   the `.` inside `str_replace` is, again, a *placeholder* standing for whatever is passed to it by `rename_with`
+> -   We use "\\\\" to escape the `.` since `str_replace` expects a regular expression by default, where `.` stands in for any character.
+
+## Summarize and group_by
+
+`summarize` is used to compute a new dataset (tibble) by using aggregation functions.
+It is usually useful when used with `group_by`, as this helps to compute summaries for each category of a column of a dataset.
+
+Some useful aggregation functions include:
+
+> -   Center: mean(), median()
+> -   Spread: sd(), IQR(), mad()
+> -   Range: \`min(), max(), quantile()
+> -   Position: first(), last(), nth()
+> -   Count: n(), n_distinct()
+> -   Logical: any(), all()
+
+## Summarize for entire dataset
+
+To find the mean of Sepal Width and Sepia Length for the iris dataset:
+
+```{r}
+summarise(iris, mean_sep_width = mean(Sepal.Width), 
+          mean_sep_length = mean(Sepal.Length)
+          )
+
+```
+
+Question: What does the code below do?
+
+```{r}
+summarise(iris, n = n(), 
+             unique= n_distinct(Species),
+             first = first(Species), 
+             last = last(Species),
+             `30th` = nth(Species, 30))
+```
+
+## Summarize by groups
+
+We first group the iris dataset by Species.
+
+```{r}
+by_group <- group_by(iris, Species)
+
+```
+
+Then take the mean for Sepal Length and Width within each group:
+
+```{r}
+summarise(by_group, mean_sep_length = mean(Sepal.Length),
+          mean_sep_width = mean(Sepal.Width))
+```
+
+## The Pipe Operator
+
+As you probably saw from the previous example, it is extraneous to be storing intermediate steps while completing a chain of tasks.
+The pipe operator (`|>`) helps up eliminate this hassle.
+Note: An easier way to understand the pipe (%\>%) operator is reading it as "and then"
+
+Consider how the pipe (`|>`) can help eliminate such hassle in the following sequence (chain) of tasks:
+
+> 1.  Filter the iris dataset for Petal Length greater than 1 and Sepal Width less than 3.3
+> 2.  Select Sepal Length, Sepal Width and Species
+> 3.  Rename the columns of Sepal Width and Sepal Length by replacing dot(.) with underscore(\_)
+> 4.  Convert the Species column to uppercase
+> 5.  Group the resulting dataset by species and compute the 50th percentile and the mean for each group
+
+```{r piping, exercise=TRUE}
+## Using piping to accomplish the above task:
+iris |>                                                ## then
+    filter(Petal.Length > 1 & Sepal.Width < 3.3) |>    ## and then
+    select(Sepal.Length, Sepal.Width, Species) |>      ## and then
+    rename(sepal_length = Sepal.Length,
+           sepal_width = Sepal.Width,) |>              ## and then
+    mutate(Species = toupper(Species)) |>              ## and then
+    group_by(Species) |>                               ## and then
+    summarize(mean_sep_length = mean(sepal_length),
+              mean_sep_width = mean(sepal_width),
+              `50th_tile_sep_len` = quantile(sepal_length, 0.5),
+              `50th_tile_sep_width` = quantile(sepal_width, 0.5)
+              )
+```
+
+## Exercises
+
+We use the dataset `gapminder` for the exercises:
+
+```{r}
+head(gapminder)
+```
+
+It contains demographic/economic information (population, GDP per capita, life expectancy) for many of the countries in the world every five years, provided by the Gapminder project.
+
+## Question 1
+
+Complete the following tasks:
+
+> -   subset for European and Asian countries excluding Japan, Norway and Israel
+> -   scale the population by dividing by 1000
+> -   select all columns aside from those ending with "y"
+> -   sort the resulting tibble by continent ascending and gdp per capita in descending order
+> -   Retain only rows 5 to 20
+
+What is the first row in the resulting dataset?
+
+```{r question1, exercise = T}
+gapminder |>
+  filter(continent %in% c("Europe", "Asia"),
+         !country %in% c("Japan", "Norway", "Israel")) |>
+  mutate(scaled_pop = pop / 1e3) |>
+  select(!ends_with("y")) |>
+  arrange(continent, desc(gdpPercap)) |>
+  slice(5:20)
+```
+
+## Question 2
+
+Complete the following tasks:
+
+> -   group the dataset by year and continent
+> -   compute the total population (hint: use sum()), mean life expectancy and count the number of cases for each group
+> -   make a scatterplot of year by total population continent. The plots should be separate for each continent.
+
+```{r question2, exercise = T}
+gapminder |>
+  group_by(year, continent) |>
+  summarize(
+    total_pop = sum(pop),
+    mean_life_expt = mean(lifeExp),
+    counts = n()
+  ) |>
+  ggplot(aes(x = year, y = total_pop, color = continent)) +
+  geom_point() +
+  facet_wrap(~ continent) +
+  theme_bw() ## add black and white background
+```
+
+## Question 3
+
+-   subset for only the year 2007
+-   group by continent
+-   compute the mean life expectancy and count the number of cases for each group
+-   create:
+    -   a bar chart for continent, where the bars are horizontal than vertical
+    -   create a pie chart for the counting variable
+        -   fill by continent
+        -   add texts superimposing the counts of each continent on the pie chart [hint]: geom_text or geom_label
+        -   move the legend to the bottom position than the right position
+
+```{r question3, exercise = T}
+df <- gapminder |>
+  filter(year == 2007) |>
+  group_by(continent) |>
+  summarize(mean_life_expt = mean(lifeExp),
+            counts = n())
+print(df)
+
+## (1) making the bar chart
+df |> ggplot() +
+  geom_col(mapping = aes(x = continent, y = mean_life_expt, fill = continent)) +
+  coord_flip() + ## making bars horizontal
+  theme_bw()  ## black and white theme
+
+```
+
+```{r question3-solutionc}
+## (2) making pie chart
+df |> ggplot(mapping = aes(x = 1, y = counts, fill = continent)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  ## adding labels
+  geom_label(
+    mapping = aes(label = counts),
+    ## alternatively use geom_text which has no border around the labels
+    color = "black",
+    ## border colr
+    position = position_stack(vjust = 0.5),
+    show.legend = FALSE
+  ) +
+  theme_void() +                            ## clears backgrond
+  theme(legend.position = "bottom")         ## move legend to bottom
+```
+
+## Writing custom functions
+
+### Predicates
+
+Let's write a *predicate* function that evaluates whether the country's GDP is in the bottom quantile, with 20% as the default value:
+
+```{r}
+bottom.quantile <- function(x, q=0.2) {
+  return(x < quantile(x, q))
+}
+```
+
+Now use it to filter the gapminder dataset for countries with GDP in the bottom **10%**, after averaging the GDP over the years, and order in ascending order of averaged GDP:
+
+```{r gpd-bottom-quantile, exercise=TRUE}
+gapminder |>
+  group_by(country) |>
+  summarize(meangdp = mean(gdpPercap)) |>
+  filter(bottom.quantile(meangdp, 0.1)) |>
+  arrange(meangdp)
+```
+
+### Inline and anonymous functions
+
+Now let's compute the GDP **growth rate** for a country and display the top 10 countries by their average GDP growth:
+
+```{r gdpgrowth, exercise=TRUE}
+gapminder |>
+  group_by(country) |>
+  summarize(meangdpgrowthrate = mean((gdpPercap - lag(gdpPercap)) / lag(gdpPercap),
+                                     na.rm = TRUE)) |>
+  arrange(desc(meangdpgrowthrate)) |>
+  head(10)
+```
+
+Now, let's find all the (country, year) pairs that had a *negative* average *nominal GDP* growth, using `filter`, then count and display the occurrences of such per each country, starting with the country with the most:
+
+*Tip: make sure you group in the correct order so you're not comparing GDP's across different countries.*
+
+```{r negativegrowth, exercise=TRUE}
+gapminder |>
+  select(country, gdpPercap) |>
+  group_by(country) |>
+  mutate(gdpgrowth = gdpPercap - lag(gdpPercap, default = 0)) |>
+  filter(gdpgrowth < 0.0) |>
+  summarize(neg_years = n()) |>
+  arrange(desc(neg_years))
+
+```
+
+Using an *anonymous function*, let's ignore any rows with negative growth.
+
+Where `~` is, again, the shorthand for anonymous functions:
+
+```         
+~ <=> function(x) { ... return something}
+```
+
+*Tip: The above GDP growth is the only possible negative value in a row, after selecting the numeric columns:*
+
+```{r negativegrowthanonymous, exercise=TRUE}
+gapminder |>
+  mutate(gdpgrowth = gdpPercap - lag(gdpPercap)) |>
+  select(where(is.numeric)) |>
+  select(where( ~ !any(. < 0.0)))
+
+```
+
+
+Again `.` stands for the argument of the function, in this case the row passed by `select` as a vector.
+
+Note that we only need an anonymous function when it is wrapped *inside* another function such as `where`; for example, we are able to compute the GDP growth inside `mutate` without them.
