@@ -16,6 +16,17 @@ library(lubridate) # install.packages("lubridate") if you don't have this
 library(Lahman) # install.packages("Lahman") if you don't have this
 ```
 
+## from last class
+
+
+
+```{r}
+flights |> slice_sample(n = 1000) |>
+     select(month, dep_delay) |>
+     pairs(col = factor(flights$origin))
+```
+
+
 ## Missing values
 
 Missing values can be:

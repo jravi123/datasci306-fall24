@@ -350,7 +350,18 @@ Complete the following tasks:
         -   move the legend to the bottom position than the right position
 
 ```{r question3, exercise = T}
-
+iris |>                                                ## then
+    filter(Petal.Length > 1 & Sepal.Width < 3.3) |>    ## and then
+    select(Sepal.Length, Sepal.Width, Species) |>      ## and then
+    rename(sepal_length = Sepal.Length,
+           sepal_width = Sepal.Width,) |>              ## and then
+    mutate(Species = toupper(Species)) |>              ## and then
+    group_by(Species) |>                               ## and then
+    summarize(mean_sep_length = mean(sepal_length),
+              mean_sep_width = mean(sepal_width),
+              `50th_tile_sep_len` = quantile(sepal_length, 0.5),
+              `50th_tile_sep_width` = quantile(sepal_width, 0.5)
+              )
 ```
 
 

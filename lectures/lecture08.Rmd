@@ -363,7 +363,6 @@ diamonds |>
 ```
 
 
-
 ## Final insights and Observations
 
 * Price is highly skewed to the right, indicating a large number of diamonds with lower prices.
