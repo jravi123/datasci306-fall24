@@ -16,15 +16,10 @@ library(lubridate) # install.packages("lubridate") if you don't have this
 library(Lahman) # install.packages("Lahman") if you don't have this
 ```
 
-## from last class
+## Today's topic
 
-
-
-```{r}
-flights |> slice_sample(n = 1000) |>
-     select(month, dep_delay) |>
-     pairs(col = factor(flights$origin))
-```
+* More on missing values
+* How now to chart
 
 
 ## Missing values
@@ -58,7 +53,7 @@ fill(df, person, response)
 
 ## Encoded missing data
 
-Sometimes, data contain a concrete value that actually represents a missing value. You see this often when dealing with data that is imported from a format that does not have a way to represent missing values, such as text or CSV. So it must instead use some special value like 99 or -999.
+Sometimes, data contain a concrete value that actually represents a missing value. You see this often when dealing with data that is imported from a format that does not have a way to represent missing values, such as text with space separated values. So it must instead use some special value like 99 or -999.
 
 To correct for this type of missing value, we can use a function called na_if(x, n). This takes a vector x and replaces any occurence of n with NA:
 
@@ -93,8 +88,10 @@ Sometimes missing values represent some fixed and known value, most commonly 0. 
 ```{r}
 
 x <- c(1, 4, 5, 7, NA)
-coalesce(x, 100)
+coalesce(x, 0)
 ```
+
+Replaces all NA values with '0'
 
 ## Titanic missing value analysis
 On April 15, 1912, the great "unsinkable" RMS Titanic ship sank to the bottom of the Atlantic.
@@ -186,6 +183,7 @@ Is there any other way you want to select the right value to impute?
 <img src = 'images/fish-stock.png' width=500px />
 
 ## Good Visualization - 5
+Page rank
 
 <img src = 'images/stem-cell-wars.jpeg' width=500px />
 
@@ -290,7 +288,7 @@ ggplot(data, aes(x = Year, y = Value)) +
 
 ## Comparison that is hard!
 
-This chart shows the increase in users over three years. However, how easy is to compare the length of chunks for each company acorss the three years?
+This chart shows the increase in users over three years. However, how easy is to compare the length of chunks for each company across the three years?
 
 ```{r}
 data <- data.frame(
