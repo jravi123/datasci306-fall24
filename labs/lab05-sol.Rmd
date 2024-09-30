@@ -1,0 +1,410 @@
+---
+title: "DATASCI 306: Lab 5"
+subtitle: "Exploratory Data Analysis"
+author: "Your Name"
+output: 
+  slidy_presentation:
+    incremental: true
+runtime: shiny_prerendered
+---
+
+```{r installPackages, echo=FALSE, include=FALSE, message=FALSE}
+# This just checks if students need to install some packages that they might
+# not have.
+if (!require(gapminder)) install.packages("gapminder", repos = "http://cran.us.r-project.org")
+
+if (!require(nycflights13)) install.packages("nycflights13")
+```
+
+```{r setup, echo=FALSE, include=FALSE}
+library(learnr) # For interactive exercises
+library(tidyverse) # For ggplot2, dplyr
+library(gapminder)
+library(ggmap)
+library(nycflights13)
+```
+
+## Today's Content
+
+> - Topics in exploratory data analysis
+
+## Exploratory Data Analysis
+
+**Exploratory data analysis (EDA)** can be thought of as a cycle:
+
+> - Generate questions about your data.
+> - Search for answers by visualizing, transforming, and modelling your data.
+> - Use what you learn to refine your questions and/or generate new questions.
+
+## Variation
+
+**Variation** refers to a variable's tendency to change in value from measurement to measurement.
+
+How variation is visualized depends on the type of the variable
+
+> - Continuous variables
+  >    - Can take any value in an infinite set of ordered values
+  >    - Typically visualized using histograms and boxplots
+> - Categorical variables
+  >    - Can take any value in a finite set of categories/levels
+  >    - Typically visualized using barplots
+> - Aspects of variation frequently focused on:
+  >    - Typical/atypical values
+  >    - Unusual values
+  >    - Missing values
+
+## Typical/Atypical Values
+
+In both barplots and histograms,
+
+  > - Tall bars indicate the most typical/common values
+  > - Short bars indicate the most atypical/least common values
+
+Questions regarding typical and atypical values that should be considered:
+
+  > - Which values are the most common?
+  > - Which values are the least common?
+  > - Are there any weird patterns?
+  > - Does what we're seeing make sense?
+
+## Typical/Atypical Values
+
+`storms` has data on tropical storms. Each row has measurements on a particular storm made at a particular time.
+
+```{r}
+head(storms)
+```
+
+The most common category is 0; the next most common is 1. From weather reports, you might expect 1-5 to be the only categories. The documentation on `storms` says that 1 represents a tropical depression and 0 represents a tropical storm. Also, going from 0 to 5, the count declines, which makes sense, since the higher the category, the higher the severity.
+
+```{r}
+storms %>% ggplot() + geom_bar(aes(category))
+```
+
+The histogram of `wind`, the maximum windspeed (in knots), looks how we'd expect it to. Most windspeeds are at the low end; a few are at the high end.
+
+```{r}
+storms %>% ggplot(aes(wind)) + geom_histogram(binwidth = 10)
+```
+
+It can be helpful to make histograms with different bin widths, as a bin width that's too small can cause important detail to be obscured. Setting the bin width to 1 reveals that the wind speed is measured to the nearest multiple of 5 knots.
+
+```{r}
+storms %>% ggplot(aes(wind)) + geom_histogram(binwidth = 1)
+```
+
+## Unusual Values
+
+Unusual values are values that don't seem to fit any pattern the other values fit.
+
+> - Outliers, values that are unusually high or low, are unusual values
+> - Sometimes unusual values are errors, sometimes they aren't
+
+`diamonds` has data on 54,000 diamonds. `y` represents the width of a diamond in millimeters.
+```{r}
+head(diamonds)
+```
+
+The histogram below reveals the presence of an unusually wide diamond, as the width scale goes all the way to 60 mm, but it looks like no diamonds are wider than 10 mm.
+```{r}
+ggplot(diamonds) + geom_histogram(mapping = aes(x = y), binwidth = 0.5)
+```
+
+We can use `coord_cartesian()` to zoom in on an area of a plot. Zooming in a little, just enough that the vertical axis scale only goes to 50 instead of over 12,000, we see that there's a diamond that's a little under 60 mm wide and another that's a little over 30 mm wide. It turns out that there are also several diamonds that are 0 mm wide.
+```{r}
+ggplot(diamonds) + 
+  geom_histogram(mapping = aes(x = y), binwidth = 0.5) +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  coord_cartesian(ylim = c(0, 50))
+```
+
+The prices in the tibble below suggest that the 0 mm widths are probably mistakes.
+```{r}
+slice_min(diamonds, y)
+```
+
+However, based on the data, there doesn't seem to be any reason to think that the widths of the two unusually wide diamonds are mistakes.
+```{r}
+filter(diamonds, y > 30)
+```
+
+## Problem 1
+
+Explore the distribution of `price` in the `diamonds` data frame. What's unusual about it? (Hint: Play with `binwidth`)
+```{r problem1, exercise = T}
+
+```
+
+## Solution 
+
+This is how the histogram with the bin defaults looks:
+```{r}
+diamonds %>%
+  ggplot(aes(price)) +
+  geom_histogram()
+```
+
+There's a bar to the left of $2000 that's unusually short
+```{r}
+diamonds %>%
+  ggplot(aes(price)) +
+  geom_histogram(binwidth = 100)
+```
+
+Zooming in on the plot over the range $0 to $2000, the unusually short bar
+appears to be at $1500.
+```{r}
+diamonds %>%
+  ggplot(aes(price)) +
+  geom_histogram(binwidth = 100) +
+  coord_cartesian(xlim = c(0, 2000))
+```
+
+
+## Missing Values
+
+> - Missing values are represented as `NA`'s
+> - In R, missing values never silently go missing - when missing values have been removed, a warning is generated
+> - Setting `na.rm = TRUE` in a geom function suppresses the warning
+
+This code changes `y` so that it equals `NA` when the width is 0 mm or more than 30 mm.
+```{r}
+diamonds2 <- diamonds %>% 
+  mutate(y = ifelse(near(y, 0) | y > 30, NA, y))
+```
+
+When we make a histogram of `y`, we now get a warning that missing values have been removed:
+```{r}
+ggplot(diamonds2, aes(x = y)) + geom_histogram(binwidth = 0.5)
+```
+
+Set `na.rm = TRUE` in `geom_histogram()` to suppress the warning:
+```{r}
+ggplot(diamonds2, aes(x = y)) + geom_histogram(binwidth = 0.5, na.rm = TRUE)
+```
+
+Sometimes missing values give us important information. In `flights`, the flight dataset, missing values in `dep_time` indicate that the flight was cancelled:
+```{r}
+flights %>% 
+  mutate(
+    cancelled = is.na(dep_time),
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + sched_min / 60
+  ) %>% 
+  ggplot(mapping = aes(sched_dep_time)) +
+  geom_freqpoly(mapping = aes(colour = cancelled), binwidth = 1 / 4)
+```
+
+
+## Question
+
+What happens to missing values in a histogram and what happens to them in a barchart? Why is there a difference?
+
+## Solution
+
+A barchart shows the distribution of a categorical variable. If the category is missing for an observation, then it can still be represented in the plot. An NA bar whose height reflects the number of observations with a missing value can be included.
+```{r}
+starwars %>%
+  group_by(species) %>%
+  filter(n() > 1) %>%
+  ggplot() +
+  geom_bar(mapping = aes(species))
+```
+
+A histogram shows the distribution of a numerical variable. If the value is missing for an observation, then it can't be included. There's no way to tell which bin it should be included in since its value isn't known. By default, observations with a missing value are removed.
+```{r}
+ggplot(starwars, aes(height)) + geom_histogram()
+```
+
+## Covariation
+
+**Covariation** refers to how the value of one variable changes as the value of another variable changes. How to visualize covariation depends on the types of the two variables.
+
+## One Categorical Variable, One Continuous Variable
+
+> - `geom_freqpoly()` plots one line for each level of a categorical variable
+> - The height of a line over a value of the continuous variable reflects the frequency of that value
+> - Not that useful when there are many levels - the plot gets too cluttered
+
+The plot below shows the `price` frequency for each quality (`cut`) level for the `diamonds` dataset. 
+```{r}
+ggplot(data = diamonds, mapping = aes(x = price)) + 
+  geom_freqpoly(mapping = aes(colour = cut), binwidth = 500) +
+  theme_bw()
+```
+
+Plotting densities instead of frequencies can help in a situation like this:
+```{r}
+ggplot(data = diamonds, mapping = aes(x = price, y = after_stat(density))) + 
+  geom_freqpoly(mapping = aes(colour = cut), binwidth = 500) +
+  theme_bw()
+```
+
+For each level of the categorical variable, `geom_boxplot()` gives a concise summary of the distribution of the continuous variable.
+
+> - Information provided by a boxplot:
+  >    - The minimum
+  >    - The first quartile
+  >    - The median 
+  >    - The third quartile
+  >    - The maximum
+  >    - Outliers
+> - Because of their simplicity, boxplots can be compared quickly
+
+The boxplot of price below shows that there are many diamonds with very large prices. In a model using `price`, it might be a good idea to take its log.
+```{r}
+ggplot(data = diamonds, mapping = aes(x = cut, y = price)) + geom_boxplot()
+```
+
+## Two Categorical Variables
+
+> - The only way to compare two categorical variables is to count how many observations are in the intersection of each pair of levels
+> - `geom_count()` makes a plot with one circle for each pair of levels
+> - The size of the circle represents the number of observations for the pair
+> - Potential downside: might imply an ordering where none exists
+
+In the plot below, `cut` has an ordering, but `color` doesn't. We might see different patterns if we ordered the colors in a different way.
+```{r}
+ggplot(data = diamonds) + geom_count(mapping = aes(x = cut, y = color))
+```
+
+A non-graphical alternative is to make a table with the count for each pair. The downside is that the table can be so large that patterns are hard to see.
+```{r}
+count(diamonds, color, cut)
+```
+
+`geom_tile()` can be useful when a variable doesn't have an ordering, but it can be hard to compare any tiles if their shades are close.
+```{r}
+diamonds %>% 
+  count(color, cut) %>%  
+  ggplot(mapping = aes(x = color, y = cut)) +
+  geom_tile(mapping = aes(fill = n))
+```
+
+## Two Continuous Variables
+
+> - `geom_point()` can make it easy to see relationships.
+> - However, the more data you have, the harder it can be to see the trend. There are several ways to address this problem:
+  >    - Changing the point transparency (`alpha`)
+  >    - Binning
+  >    - Discretizing
+
+The plot below shows the relationship between carat and price. Since there are tens of thousands of points, overplotting may be a problem.
+```{r}
+ggplot(data = diamonds) +
+  geom_point(mapping = aes(x = carat, y = price)) +
+  theme_bw()
+```
+
+If we reduce the transparency (`alpha`), overplotting becomes less of a problem since we can see more clearly which pairs of carat and price are more common than others. We see that many pairs are concentrated along vertical lines, where carat is constant.
+```{r}
+ggplot(data = diamonds) + 
+  geom_point(mapping = aes(x = carat, y = price), alpha = 1 / 100) +
+  theme_bw()
+```
+
+We could try binning the data - dividing the plot into polygons and coloring each according to the number of points it contains. Squares are used below:
+```{r}
+ggplot(data = diamonds) +
+  geom_bin2d(mapping = aes(x = carat, y = price)) +
+  theme_bw()
+```
+
+We could discretize `carat` - turn it into a categorical variable. Below `carat` is discretized by turning each range of length 0.1 into a category.
+```{r}
+ggplot(data = diamonds, mapping = aes(x = carat, y = price)) + 
+  geom_boxplot(mapping = aes(group = cut_width(carat, 0.1)))
+```
+
+We could instead create categories for `carat` that have the same number of values. Below, each category has 20 values:
+```{r}
+ggplot(data = diamonds, mapping = aes(x = carat, y = price)) + 
+  geom_boxplot(mapping = aes(group = cut_number(carat, 20)))
+```
+
+
+
+## Problem 2
+
+>- Subset the `gapminder` data for only the year 2007
+>- Make a histogram for GDP per capita
+>- Superimpose your plot with a density plot. [Hint: To make this work, go back to step two change the y axis of the histogram to density]
+
+How many modes do you see?
+
+```{r}
+head(gapminder)
+```
+
+
+```{r challenge1, exercise = T}
+
+```
+
+
+## Solution
+
+There are two modes.
+
+```{r}
+gapminder %>%
+  filter(year == 2007) %>%
+  ggplot() +
+  geom_histogram(aes(x = gdpPercap, y = stat(density)), alpha = 0.3) +
+  geom_density(aes(x = gdpPercap), color = "darkorange", size = 2)
+```
+
+
+## Problem 3
+
+The goal of this task is to use visualization to inspect the distribution of a continuous variable in the `gapminder` dataset. While this may look challenging, you are encouraged to follow the instructions to help complete the task.
+
+>- Make a histogram for GDP per capita
+>- Superimpose your plot with a density plot
+
+
+We know that a distribution is positively skewed (skewed to the right) when the mean is greater than the median. We wish to visualize the mean and median as lineplots superimposed on our previous plot:
+
+>- Create a new tibble containing the mean and median from the `gapminder` data
+>- Superimpose vertical-dashed line plots (see `geom_vline`) for both the mean and median onto the previous plot; differentiating these two lines by your choice of color:
+  >    - You can create a color tibble and map the vertical line plots to each color.
+  >    - With the help of `scale_color_manual`, you can then obtain a legend matching those colors
+  
+```{r challenge2, exercise = T}
+
+```
+
+## Solution
+
+```{r}
+##### tibble for the averages #####
+averages = gapminder %>% 
+               summarise(mean_gdppcap = mean(gdpPercap, na.rm = TRUE),
+                         median_gdppcap = median(gdpPercap, na.rm = TRUE)
+               )
+
+
+##### tibble for colors #####
+plt_colors = tibble(mean = "red",
+                    median = "dodgerblue")
+
+
+##### plot ######
+gapminder %>%
+  ggplot() +
+  geom_histogram(aes(x = gdpPercap, y = stat(density)), alpha = 0.3) +
+  geom_density(aes(x = gdpPercap), color = "darkorange", size = 2) +
+  ## adding mean and median marks; use the averages dataset
+  geom_vline(data = averages,
+             mapping = aes(xintercept = mean_gdppcap, color = "mean"),
+             linetype = "dashed",
+             size = 2) +
+  geom_vline(data = averages,
+             mapping = aes(xintercept = median_gdppcap, color = "median"),
+             linetype = "dashed", 
+             size = 2) +
+  ## make the color tibbles map to the specified colors in the geom_line aesthetics
+  scale_color_manual(values = plt_colors) +
+  theme_bw()
+```

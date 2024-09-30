@@ -110,6 +110,10 @@ How would we calculate the rate variable using table2?
 table2
 ```
 
+```{r messy-example, exercise = TRUE}
+
+```
+
 ## Summaries and counts
 
 Summary commands like summarize and count also preserve tidy data:
