@@ -1,0 +1,416 @@
+---
+title: "DATASCI 306: Lecture 11"
+subtitle: "Relational data"
+output:
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(lubridate) # install.packages("lubridate") if you don't have this
+
+```
+
+
+## Today's goals
+* Learn about keys
+* Different types of relations between tables
+* Commands for joining related tables together
+
+## flight tables
+
+We have already spent a lot of time analyzing the flights table. In fact, there are four other tables in nycflights13 that contain related information about these flights:
+
+```{r}
+library(nycflights13)
+glimpse(flights)
+glimpse(airlines)
+glimpse(airports)
+glimpse(weather)
+```
+
+Let us find our DTW!
+
+```{r}
+airports |> filter(faa == "DTW")
+```
+
+How many unique values are there in the `origin` column in weather?
+
+```{r}
+weather$origin |> unique()
+```
+
+## Relationships
+Together these 4 tables form a relationship
+
+<img src='./images/relational-nycflights.png' width=500px />
+
+The particular relationships in this database are:
+
+* flights connects to planes via tailnum.
+* flights connects to airlines via carrier.
+* flights connects to airports twice: via origin and dest.
+* flights connects to weather via origin (the location), and year, month, day and hour.
+
+## Keys
+
+The "key" to understanding relational databases is... keys.
+
+**Primary Key**
+
+A primary key is a variable (or set of variables) that uniquely identifies an observation in its own table: there is at most one row in the table that corresponds to any setting of the columns which comprise the key.
+
+A primary key is
+
+* a variable or
+* set of variables that uniquely identify each observation (compound key).
+
+When more than one variable is needed, the key is called a compound key.
+
+In the planes table, each airplane is identified by its tailnum:
+
+```{r}
+
+print(planes)
+```
+
+The tail number of an airplane is assigned by a government agency and is unique: no two planes can have the same tail number. Thus, `tailnum` should be a `primary key` in this table.
+
+To check that one or more variables constitutes a primary key, we can group by those variables and then check that the number of distinct values equals the number of rows in the data set:
+
+```{r}
+# planes %>% print
+planes |> summarize(n = n(), nd = n_distinct(tailnum))
+```
+
+Alternatively, verify
+
+```{r}
+planes |> count(tailnum) |>
+  filter(n > 1)
+```
+
+Compare with flights, where tailnum does not uniquely identify each row. (There are many flights present for the same airplane.)
+
+```{r}
+flights |> count(tailnum) |>
+  filter(n > 1) |> 
+  print()
+```
+
+## Determining primary key
+
+What is the primary key for the flights table?
+
+```{r}
+flights |> 
+  count(year, month, day, dep_time, tailnum) |>
+  filter (n > 1)
+```
+
+We might guess that year, month, day, and tailnum are sufficient to identify each row in flights, but this is not true:
+
+```{r}
+flights |> 
+  summarize(n = n(), nd = n_distinct(year, month, day, tailnum))
+```
+
+In fact, even restricting to the exact minute that an airplane departed is not sufficient:
+
+```{r}
+flights |> 
+  summarize(n = n(), nd = n_distinct(tailnum, time_hour, minute))
+```
+
+And
+
+```{r}
+flights |> 
+  summarize(n = n(), 
+            nd = n_distinct(tailnum, year, month, day, hour, minute))
+```
+
+This says that there are certain airplanes that are marked as having departed more than once in the same year, month, day, hour and minute. We can inspect these rows as follows:
+
+```{r}
+count(flights, tailnum, time_hour, minute) |> 
+  filter(n > 1) |> print()
+```
+
+```{r}
+count(flights, tailnum, year, month, day, hour, minute) |>
+  filter(n > 1) |> print()
+```
+
+These likely indicate data entry errors.
+
+## Exercise
+
+Does the columns manufacturer, model, year, displ, trans, together form a composite primary key in mpg?
+
+```{r eg-1, exercise = TRUE}
+mpg
+```
+
+```{r eg-1-solution}
+# No
+mpg |> count(manufacturer, model, year, displ, trans) |>
+  filter( n > 1)
+```
+
+## Relations
+
+A foreign key is a variable (or set of variables) that corresponds to a primary key in another table. For example:
+
+* `flights$tailnum` is a foreign key that corresponds to the primary key `planes$tailnum`.
+* `flights$carrier` is a foreign key that corresponds to the primary key `airlines$carrier`.
+* `flights$origin` is a foreign key that corresponds to the primary key `airports$faa`.
+* `flights$dest` is a foreign key that corresponds to the primary key `airports$faa`.
+
+A **primary key** and the corresponding **foreign key** in another table form a relation. Relations come in several forms:
+
+* One-to-many. (Most common). For example, each flight has one plane, but each plane has many flights.
+* Many-to-many: For example, each airline flies to many airports; each airport hosts many airlines.
+* One-to-one. Each row in one table corresponds uniquely to a row in a second table. This is relatively uncommon because you could just as easily combine the two tables into one.
+
+## Joins
+
+```{r}
+x = tribble(
+  ~key, ~val_x,
+     1, "x1",
+     2, "x2",
+     3, "x3"
+)
+y = tribble(
+  ~key, ~val_y,
+     1, "y1",
+     2, "y2",
+     4, "y3"
+)
+print(x)
+print(y)
+```
+
+
+Joins are the way we combine or "merge" two data tables based on keys. To understand how joins work we'll study these two simple tables:
+
+<img src = "./images/join-setup.png" width=500px />
+
+## Inner Join
+Inner joins match a pair of observations whenever their keys are equal:
+
+<img src="./images/inner_join.png" width=500px />
+
+Old way of joining using `by`
+```{r}
+x |> inner_join(y, by = "key")
+```
+
+New way of joining using `join_by`
+
+```{r}
+x |> inner_join(y, join_by(key))
+```
+
+This is same as
+
+```{r}
+x |> inner_join(y, join_by(key == key))
+```
+Note that there is no row for key=3 or key=4: with an inner join, unmatched rows are not included in the result. For this reason, we do not as often use inner joins for data analysis since you can easily lose observations.
+
+## Differences between by and join_by
+
+
+* by = "x" corresponds to join_by(x).
+* by = c("a" = "x") corresponds to join_by(a == x).
+
+## Outer Join
+
+An outer join keeps observations that appear in at least one of the tables. There are three types of outer joins:
+
+* A left join keeps all observations in x.
+* A right join keeps all observations in y.
+* A full join keeps all observations in both x and y.
+
+<img src = "./images/left_join.png" width=500px />
+
+
+<img src ="./images/right_join.png" width=500px />
+
+
+<img src = "./images/full_join.png" width=500px />
+
+```{r}
+x |> full_join(y, join_by(key == key))
+```
+
+Left joins are the most common. Use them to look up data in another table, but preserve your original observations when there are records on the left table for which the other table does not have a match.
+
+## Exercise
+The `flights` table has a `carrier` column which is a two-letter code for the `airline`. The `airlines` table maps these code to recognizable airline names.
+
+How many flights are there per carrier name (full name of the carrier) in the dataset?
+
+```{r ex-1, exercise=TRUE}
+
+```
+
+```{r ex-1-solution}
+flights |>
+  count(carrier) |>
+    left_join(airlines, join_by(carrier)) |>
+      select(name, n)
+```
+
+## Exercise
+How many flights departing from LGA were operated by JetBlue Airways?
+
+```{r ex-2, exercise = TRUE}
+
+```
+
+
+```{r ex-2-solution}
+# jetblue from LGA
+flights |> filter(origin == 'LGA') |>
+  left_join(airlines) |>
+    filter (name == 'JetBlue Airways') |>
+      nrow()
+```
+
+## Duplicate foreign keys
+
+A primary key is unique but not a foreign key.
+
+One table has duplicate keys
+This is useful when you want to add in additional information as there is typically a one-to-many relationship.
+
+<img src = "./images/join-one-to-many.png" width=500px />
+
+In fact, we already saw an example of this above when we joined planes to flights: each plane belongs to potentially many flights.
+
+## Exercise
+What is the most common model of airplane used by each carrier?
+
+```{r ex-3, exercise = TRUE}
+
+```
+
+```{r ex-3-solution}
+flights |>
+  inner_join(planes, join_by(tailnum)) |>
+  group_by(carrier, model) |>
+    summarise(n = n()) |> slice_max(n)
+```
+
+## When both tables have duplicate keys
+This represents a many-to-many join and is either an error since the key does not uniquely identify observations in either table or both the tables have only foreign keys representing primary key from a third table. Joining duplicated keys results in the Cartesian product of all the possible matches:
+
+<img src = "./images/join-many-to-many.png" width=500px />
+
+Be careful when doing many-to-many merges. It's possible to generate huge tables by accident and crash R.
+
+
+## Defining key columns
+When we do a join using left_join(), R take as the key whatever column names the two tables have in common:
+
+```{r}
+
+left_join(flights, planes) |> print()
+```
+
+This is called a natural join. If the key column(s) are named differently in the two tables, we must specify the mapping between the two using the `by=` or `join_by` parameter.
+
+If we try to join airports to flights:
+
+```{r eg, exercise = TRUE}
+left_join(flights, airports)
+```
+
+This has produced an error, because airports and flights do not have any columns in common. Indeed, the three digit FAA code is called faa in airports, but appears as either origin or dest in flights. To fix the error, we must specify which of origin or dest should be matched:
+
+```{r}
+left_join(flights, airports, join_by(dest == faa))
+```
+
+## Exercise
+How many flights were bound to the Hawaii timezone in this dataset?
+
+```{r ex-4, exercise = TRUE}
+
+```
+
+```{r ex-4-solution}
+flights |> left_join(airports, join_by(dest == faa)) |>
+  filter(tzone == 'Pacific/Honolulu') |> 
+  nrow()
+```
+
+
+## Filtering joins
+
+Filtering joins allow us to filter rows on one table based on their presence or absence in another table. We've already seen some examples of this on the problem sets:
+
+```{r}
+
+dest_top6 <- count(flights, dest) |> top_n(6)
+filter(flights, dest %in% dest_top6$dest) |> nrow()
+
+```
+
+## Semi-join
+semi_join(x, y) keeps all the observations in x that are also in y.
+
+<img src = "./images/semi_join.png" width=500px />
+
+
+## Exercise
+Assume every flight is full. The busiest travel day in terms of total # of passengers scheduled to depart is: (Hint: the planes table tells you how many passengers each airplane holds.)
+
+```{r ex-5, exercise = TRUE}
+
+```
+
+```{r ex-5-solution}
+flights |>
+  left_join(planes, join_by(tailnum)) |>
+    group_by(month, day) |>
+      summarise(total = sum(seats, na.rm = T)) |>
+        arrange(-total)
+```
+
+
+## Anti-join
+anti_join(x, y) does the opposite of semi_join: it drops all the observations in x that are also in y.
+
+<img src = "./images/anti_join.png" width=500px />
+
+Anti-joins are useful for finding mismatches in joins. There are many flights for which there is no tailnum in 'planes' table. To find out more about these flights we could use an anti-join to select only those rows:
+
+```{r}
+anti_join(
+    flights,
+    planes,
+    join_by("tailnum")
+) |> filter(!is.na(tailnum)) |>
+    distinct(tailnum) |>
+    print()
+```
+
+What could be the reason for missing tailnums in the planes dataframe?  
+
+The one plane that is represented is N539AA. You can look it up in an online database and find out it's a private jet. My guess is the others are private jets too.
+
+     
+
+
+
+
