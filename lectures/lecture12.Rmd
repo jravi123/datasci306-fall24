@@ -1,0 +1,340 @@
+---
+title: "DATASCI 306: Lecture 12"
+subtitle: "SQL"
+output:
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(DBI)
+library(dbplyr)
+library(tidyverse)
+library(nycflights13)
+library(lubridate) # install.packages("lubridate") if you don't have this
+```
+
+## SQL - Structured Query Language
+
+A huge amount of data lives in relational databases so it is important to understand how to connect to a relational database and work with it.
+
+Today's lecture corresponds to Chapter 21 of your book
+
+## Database Connection
+
+To connect to the database from R, you’ll use a pair of packages:
+
+* DBI (database interface) - this provides a set of generic functions that connect to the database, upload data, run SQL queries, etc.
+* You’ll also use a package tailored for the DBMS you’re connecting to. This package translates the generic DBI commands into the specifics needed for a given DBMS. There’s usually one package for each DMBS, e.g. RPostgres for Postgres and RMariaDB for MySQL. In this example we use SQLite and the package to use is RSQLite
+
+## Let's create a database
+
+```{r}
+
+# Create an ephemeral in-memory RSQLite database
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+
+dbListTables(con)
+```
+
+At the outset you see that there are no tables when you run the above command.
+
+## dbplyr
+
+dbplyr is a dplyr backend, that allows you to keep writing dplyr code and dbplyr translates it to SQL. Now we are going to create a table called 'mpg' in our SQLite database using the mpg tibble and dbplyr is generating the necessary SQL queries to get this done behind the scenes.
+
+```{r}
+dbWriteTable(con, "mpg", mpg, overwrite = T)
+dbListTables(con)
+```
+
+To remove
+
+```{r}
+# dbRemoveTable(con, 'mpg') # this will delete the table
+```
+
+Now let us look into the column names of this table
+
+```{r}
+dbListFields(con, "mpg")
+```
+
+Time to read the entire table!
+
+```{r}
+dbReadTable(con, "mpg")
+```
+
+## Selecting data from a table
+
+The SQL syntax for selecting column(s) from a table is
+
+
+    sql
+    SELECT <col1>, <col2>, ..., <coln> FROM <table>
+
+
+Note the similarity to the corresponding tidyverse command:
+
+    r
+    select(<table>, <col1>, <col2>, ..., <coln>)
+
+
+Let us select some records
+
+```{r}
+res <- dbSendQuery(con, "SELECT * FROM mpg")
+res
+```
+
+```{r}
+dbFetch(res) |> head()
+```
+
+The special keyword * means "select everything" and is equivalent to dplyr's everything():
+
+If you have a really big table, SQL allows you to LIMIT the number of rows it returns.
+
+```{r}
+# using limit
+res <- dbSendQuery(con, "SELECT * FROM mpg LIMIT 2")
+dbFetch(res)
+```
+
+## Filtering
+
+The SQL syntax for filtering rows in a table uses the WHERE clause:
+
+
+    sql
+    SELECT * FROM <table> WHERE dest = "IAH"
+
+
+This is the same as:
+
+
+    r
+    filter(<table>, dest == "IAH")
+
+
+Note that SQL uses a single = to check equality!
+
+```{r}
+res <- dbSendQuery(con, "SELECT * FROM mpg WHERE cyl = 4")
+dbFetch(res)
+```
+
+## More tables
+
+Now let us create more tables using our tidyverse datasets
+
+```{r}
+dbWriteTable(con, "flights", flights, overwrite = T)
+dbWriteTable(con, "airports", airports, overwrite = T)
+dbWriteTable(con, "airlines", airlines, overwrite=T)
+dbWriteTable(con, "planes", planes, overwrite = T)
+dbWriteTable(con, "weather", weather, overwrite = T)
+```
+
+We will define a convenience function to simplify our query
+
+```{r}
+q <- function(...) dbGetQuery(con, ...)
+print(q)
+```
+
+## Missing data
+In SQL, missing data is coded as NULL. This is a special value which is 
+analogous to NA in R.
+
+```{r}
+# select non-null dep time
+
+q('SELECT * FROM flights WHERE dep_delay IS NOT NULL') |> as_tibble() |> print()
+
+# filter(flights, !is.na(dep_delay))
+```
+
+## Summarizing
+
+The SQL syntax for summarizing is using the `GROUP BY` clause:
+
+    {sql}
+    SELECT AVG(<col>) AS avg_col FROM <table> GROUP BY(<group cols>)
+    
+This is the same as:
+
+    {r}
+    <table> |> group_by(<group cols>) |> summarize(avg_col = mean(<col>))
+    
+```{r}
+# select the average distance and count for each day
+
+q("SELECT year, month, day, AVG(distance) AS avg_dist,
+    COUNT() AS n FROM flights GROUP BY year, month, day")
+
+# equivalent to
+# flights |> group_by(year, month, day) |> summarize(avg_dist = mean(distance), n = n())
+```
+
+## Joins
+
+The SQL syntax for joins:
+
+    {sql}
+    SELECT * FROM <table> LEFT JOIN <other_table> ON <left_key_col> =            <right_key_col>
+
+This is the same as:
+
+    {r}
+    left_join(<table>, <other_table>, by = c("<left_key_col>" =         "<right_key_col>"))
+
+
+```{r}
+q("SELECT flights.year, planes.tailnum AS flightyr, * FROM flights
+    LEFT JOIN planes ON flights.tailnum = planes.tailnum")
+```
+
+
+## Ranking
+
+Ranking operates slightly differently in SQL than dplyr. The overall syntax is:
+
+    SELECT RANK() OVER (
+        PARTITION BY <columns>
+        ORDER BY <expression1> [ASC|DESC], ...
+    ) RankedCol FROM <table>
+    
+```{r}
+# rank departure delay by month, day
+
+q('SELECT year, month, day, dep_delay, RANK() OVER (
+    PARTITION BY month, day
+    ORDER BY dep_delay DESC
+    ) r FROM flights')
+```
+
+The above query is equivalent to
+
+```{r}
+flights |> group_by(month, day) |> mutate(r = min_rank(-dep_delay)) |>
+    select(month, day, dep_delay, r) |> arrange(month, day, r)
+```
+
+## Subqueries
+An aspect of SQL I find confusing is that you cannot filter (WHERE ...) based on a ranking condition:
+
+```{r eg, exercise = TRUE}
+q('SELECT year, month, day, dep_delay, RANK() OVER (
+    PARTITION BY month, day
+    ORDER BY dep_delay DESC
+    ) r FROM flights where r  = 1')
+```
+
+You need to use subquery to get the result as shown below
+
+```{r}
+
+q('SELECT year, month, day, dep_delay, r FROM
+    (
+        SELECT year, month, day, dep_delay, RANK() OVER (
+        PARTITION BY month, day
+        ORDER BY dep_delay DESC
+    ) r FROM flights)
+    WHERE r <= 2
+')
+```
+
+## Exercise
+
+Find the max highway miles across each manufacturer
+
+
+```{r}
+
+res <- dbSendQuery(con, "select manufacturer, max(hwy) from mpg group by manufacturer")
+dbFetch(res)
+dbClearResult(res)
+```
+
+## Exercise
+How many 4 cylinder models are present in this database?
+
+```{r ex-4, exercise = TRUE}
+
+```
+
+
+```{r ex-4-solution}
+res <- dbSendQuery(con, "select count(*) from mpg where cyl = 4")
+dbFetch(res)
+dbClearResult(res)
+```
+
+## Exercise
+
+Extend the previous query to retrieve the minimum hwy value across manufacturer and model
+
+```{r ex-5, exercise = TRUE}
+
+```
+
+```{r ex-5-solution}
+res <- dbSendQuery(con, "SELECT manufacturer, model, min(hwy) FROM mpg GROUP BY manufacturer, model")
+dbFetch(res)
+dbClearResult(res)
+```
+
+## Using `having` clause
+
+The `WHERE` keyword works with select. However, when you want to sub select based on grouped data, you have to use `HAVING` instead
+
+Here is an example; Get all destinations that have total flights to that destination greater than 10000
+
+```{r}
+
+q('select dest, count(*) as total from flights group by dest having total > 10000' )
+```
+
+## Exercise
+Get all the manufacturers who have 4 or more 'compact' car class
+
+```{r ex-6, exercise = TRUE}
+
+```
+
+```{r ex-6-solution}
+res <- dbSendQuery(con, "SELECT manufacturer, class, count(*) FROM mpg WHERE class = 'compact' GROUP BY manufacturer HAVING count(*) >= 4")
+dbFetch(res)
+dbClearResult(res)
+```
+
+## Exercise
+Get distinct car manufacturers in this dataset
+
+```{r ex-7, exercise = TRUE}
+
+```
+
+```{r ex-7-solution}
+res <- dbSendQuery(con, "SELECT DISTINCT manufacturer FROM mpg")
+dbFetch(res)
+dbClearResult(res)
+```
+
+Once done, it is a good idea to disconnect from the database
+
+```{r}
+dbClearResult(res)
+dbDisconnect(con)
+```
+
+
+
+    
+The easiest way to learn it is to see some examples.
