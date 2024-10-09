@@ -1,0 +1,178 @@
+---
+title: "Midterm review"
+output:
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(lubridate) # install.packages("lubridate") if you don't have this
+library(nycflights13) # install.packages("Lahman") if you don't have this
+```
+
+
+Here are some functions you may be using in this exam.
+
+`starts_with`, `is.character`, `is.numeric`, `is.factor`, `is.logical`, `is.double`, `is.integer`
+`as.numeric`, `as.logical`, `as.factor`, `as.character`, `as.integer`
+
+`group_by`, `pivot_longer(names_from, values_from, id_cols, names_sep ...)`, `pivot_wider(cols, names_to, values_to, names_prefix, names_sep,...)`
+
+`geom_line`, `geom_point`, `ggplot(aes(x = .., y = ..))`, `geom_bar`, `slice_max(n,... )`, `arrange(col)`
+
+## Question
+
+In the below diagram, I would like to have every unique value of the cylinder (cyl) to have a different color.  Why is the color shown in a blue gradient currently? How will you fix the code to get different colors for each distinct cyl value? 
+
+```{r}
+mpg |> ggplot() + geom_point(aes(x = displ, y = hwy, color = cyl))
+```
+
+
+
+## Question
+What is the output of the below expression?
+
+```{r q2, exercise = T}
+sum(c(4, 5, NA, T, F, T))
+```
+
+## Question
+
+Write a statement that displays only those columns that start with the letter 'm' in the 'mpg' dataset
+
+```{r q3, exercise = TRUE}
+mpg |> glimpse()
+```
+
+```{r q3-solution}
+mpg |> select(starts_with('m'))
+```
+
+## Question
+
+```{r}
+storms |> glimpse()
+```
+
+You see the glimpse of the storms dataset as shown above.
+
+Write code to display the total number of storms for each year as shown in the diagram below
+
+```{r, echo=FALSE}
+storms |> count(year) |> ggplot(aes(x = year, y = n)) + geom_line() + geom_point()
+```
+
+Enter your code as your solution
+
+```{r q4, exercise = TRUE}
+
+```
+
+## Question
+
+What is the output of the below statement? Describe the answer in words and sentences
+
+```{r q4a, exercise = TRUE}
+storms |> group_by(year, category) |> summarise(n = n()) |> summarize(n = n())
+```
+
+
+## Question
+
+Using the `nycflights13` database, I find the top 5 destinations and then I want to plot the top 5 destinations as a bar chart. However, my code is not working as shown below.  Please fix the error
+
+```{r q5, exercise = TRUE}
+top_5 <- flights |> count(dest) |> slice_max(n = 5, n)
+
+flights |> select(dest %in% top_5$dest) |> ggplot(aes(x = dest)) + geom_bar(aes(fill = carrier))
+```
+
+## Question
+
+Write the above expression as a join instead
+
+```{r q6, exercise = TRUE}
+
+```
+
+```{r q6-solution}
+flights |> count(dest) |> slice_max(n = 5, n) |> left_join(flights)
+```
+
+## Question
+
+Write a function to compute the outliers of a given vector. Return the outliers from the function. An outlier is defined as any data point that falls more than 1.5 times the interquartile range beyond the first or third quartiles.
+
+Hint: you can derive the first and third quarlies using quantile(v, 0.25) and quantile(v, 0.75)
+
+```{r q7, exercise = TRUE}
+get_outliers <- function(v){
+  
+}
+
+```
+
+```{r}
+get_outliers <- function(v){
+  q1 = quantile(v, 0.25)
+  q3 = quantile(v, 0.75)
+  iqr = q3 - q1
+  c(v[v < q1 - 1.5 * iqr], v[v > q3 + 1.5 * iqr])
+}
+
+v = c(1:10, 100)
+get_outliers(v)
+```
+
+
+
+## Question
+Write a query to get all records in 'mpg' dataset that have hwy value greater than 30 and cty value greater than 25
+
+```{r q8, exercise = TRUE}
+
+```
+
+```{r q8-solution}
+mpg |> filter(cty > 25, hwy > 30)
+```
+
+## Question
+
+
+```{r}
+flights |> glimpse()
+```
+Show all the carriers and the total number of unique destinations they fly to as shown below
+
+```{r, echo=FALSE}
+flights |> group_by(carrier) |> summarize(total_dest = n_distinct(dest)) |> pivot_wider(names_from = carrier, values_from = total_dest)
+```
+
+```{r q9, exercise = TRUE}
+
+```
+
+```{r q9-solution}
+flights |> count(carrier, dest) |> count(carrier) |> pivot_wider(names_from = carrier, values_from = n)
+```
+
+## Question
+Add a new column called to show sched_dep_time in PST. Assume the given time is in EST
+
+
+```{r q10, exercies = TRUE}
+
+```
+
+```{r q10-solution}
+flights |> mutate(sched_dep_time_pst = sched_dep_time - 300)
+```
+
+
