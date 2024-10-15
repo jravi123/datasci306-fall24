@@ -21,7 +21,7 @@ Here are some functions you may be using in this exam.
 `starts_with`, `is.character`, `is.numeric`, `is.factor`, `is.logical`, `is.double`, `is.integer`
 `as.numeric`, `as.logical`, `as.factor`, `as.character`, `as.integer`
 
-`group_by`, `pivot_longer(names_from, values_from, id_cols, names_sep ...)`, `pivot_wider(cols, names_to, values_to, names_prefix, names_sep,...)`
+`group_by`, `pivot_wider(names_from, values_from, id_cols, names_sep ...)`, `pivot_longer(cols, names_to, values_to, names_prefix, names_sep,...)`
 
 `geom_line`, `geom_point`, `ggplot(aes(x = .., y = ..))`, `geom_bar`, `slice_max(n,... )`, `arrange(col)`
 
