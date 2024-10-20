@@ -333,8 +333,6 @@ Once done, it is a good idea to disconnect from the database
 dbClearResult(res)
 dbDisconnect(con)
 ```
-
-
-
-    
-The easiest way to learn it is to see some examples.
+## Other resources
+* [w3schools](https://www.w3schools.com/sql/default.asp)
+* [SQL murder myster](https://mystery.knightlab.com/)

@@ -1,6 +1,5 @@
 ---
-title: "DATASCI 306: Lab 7"
-author: "Your Name"
+title: "DataSci 306: Lab 7"
 output: 
   learnr::tutorial:
     progressive: true
@@ -12,423 +11,202 @@ runtime: shiny_prerendered
 ```{r installPackages, echo=FALSE, include=FALSE, message=FALSE}
 # This just checks if students need to install some packages that they might 
 # not have.
-# For HW4 Q2, Q3
-if (!require(Lahman)) 
-  install.packages("Lahman", repos = "http://cran.us.r-project.org")
+
+if (!require(nycflights13)) install.packages("nycflights13", repos = "http://cran.us.r-project.org")
+if (!packageVersion("learnr") == "0.11.1") install.packages("learnr", repos = "http://cran.us.r-project.org")
 ```
 
 ```{r setup, eval=TRUE, include=FALSE, message=FALSE, echo=FALSE}
-library(Lahman) # For HW4 Q2, Q3
 library(learnr)     # For interactive exercises
-library(lubridate)
-library(tidyverse)  # For dplyr, stringr
+library(tidyverse)  # For ggplot2, dplyr, readr
+library(lubridate)  # For some functions involving dates
+library(nycflights13)
+library(readxl)
 
+tutorial_options(exercise.reveal_solution = FALSE)
+```
 
-tutorial_options(exercise.reveal_solution=TRUE)
+```{r fake_setup, echo=TRUE, eval=FALSE}
+library(learnr)     # For interactive exercises
+library(tidyverse)  # For ggplot2, dplyr, readr
+library(lubridate)  # For some functions involving dates
+library(nycflights13)
+library(readxl)
 ```
 
 
 ## Today's Content
 
-- Strings and Regular Expressions
+* Data files handling
 
+## Spreadsheets
+In this section, we will learn how to import spreedsheets, which is covered in Chapter 22 of R4DS
 
-## Strings
+In Chapter 8 Data import, we have learned how about importing data from plain txt files, e.g. .csv and .tsv files. However, we may also need to analyze data from spreadsheets sometimes. We will introduce tools for importing and writing data data from Excel spreadsheets and Google Sheets.
 
-Recall that a **string** is a sequence of characters.
+* Excel
+* Reading spreadsheets
+* Writing to Excel
 
-Below is an example of a string as it would appear on paper.
-```
-datascience
-```
-
-Strings in R work differently than they do on paper. In R, a string **must either begin and end with a double quote `"` or begin and end with a single quote `'`.**
-```{r}
-"datascience"
-'datascience'
-```
-
-**Question:** What would happen if you entered `"datascience"` without the quotes and why?
-```{r no_quotes, exercise=TRUE}
-
-```
-
-```{r no_quotes-solution}
-datascience
-# Without the quotes, the interpreter would assume that datascience is an
-# object that we want to print. It wouldn't be able to find datascience because
-# it doesn't exist and would then throw an error.
-```
-
-`writeLines()` takes the R version of a string and shows us the paper version.
-```{r, comment=NA}
-writeLines("datascience")
-```
-
-Certain characters are inserted in strings using **escape sequences**. An escape sequence starts with a backslash `\`. For example, the escape sequence for `tab` is `\t`. The backslash combines with the next character to form an escape sequence. See the help page on `Quotes` for the list of valid escape sequences in R. This is how a tab would be inserted in the previous string.
-```{r}
-"data\science"
-```
-
-This may be more natural, but it's worse because it's ambiguous.
-```{r}
-"data  science"
-```
-
-To include a backslash, use the escape sequence `\\`.
-```{r}
-"data\\science"
-```
-
-Another commonly used escape sequence is the newline escape sequence. A newline represents the start of a new line.
-```{r}
-"data\science"
-```
-
-**Question:** What would happen if you tried to insert a tab, or a backslash, or a newline in the middle of `"datascience"` without using an escape sequence and why? 
-```{r escape_seqs, exercise=TRUE}
-
-```
-
-```{r escape_seqs-solution}
-# Inserting a tab by hitting the tab key doesn't work. In the console, it would
-# bring up the autocomplete box.
-# Inserting a backslash with just one backslash causes \y to be interpreted as
-# an escape sequence, which causes an error as \y isn't a valid escape
-# sequence.
-# Inserting a newline by hitting the return key seems to work, but R seems to
-# think that the code has a mistake
-```
-
-Here are the outputs of `writeLines()` for the three modifications of `"datascience"`. They look the way they would on paper.
-```{r, comment=NA}
-writeLines("data\science")
-writeLines("data\\science")
-writeLines("data\science")
-```
-
-Since quotes are used to mark the start and end of an R string, an escape sequence must be used to put a quote in the middle of an R string if it's of the same type as the start and end quotes.
-```{r, comment=NA}
-"data\"science" 
-writeLines("data\"science")
-```
-
-**Question:** What happens if you don't escape and why?
-```{r no_escaping, exercise=TRUE}
-
-```
-
-```{r no_escaping-solution}
-# The interpreter sees the middle quote and thinks that the string has ended,
-# but then sees another character, which doesn't make any sense, so it throws
-# an error
-"data"science"
-```
-
-However, if the quote is of the other type, escaping isn't necessary.
-```{r, comment=NA}
-"data'science"
-writeLines("data'science")
-```
-
-## Strings: More Functions
-
-We've talked about several functions for working with strings: `str_c()`, `str_length()`, `str_sub()`, `str_split()`, etc. Some additional useful string functions are described below.
-
-`strrep()` is used to repeat a string. `strrep()` is in the `base` package unlike the other string functions we've covered.
-```{r}
-strrep(c("apple", "banana", "cherry"), 1:3)
-```
-
-`str_interp()` makes a string from a template by inserting the values of variables. This can be very useful when making titles for plots. Note that a variable must be enclosed in braces and a dollar sign must be put before the left brace.
-```{r}
-x <- 1
-y <- 2
-z <- 3
-str_interp("${x} + ${y} = ${z}")
-```
-
-### Exercise
-
-Without hard-coding, recreate the ASCII art below. There are 10 lines, each of which has 8 hyphens in the middle.
-```
-|----------|
-|----------|
-|----------|
-|----------|
-|----------|
-|----------|
-|----------|
-|----------|
-|----------|
-|----------|
-```
-
-```{r strrep, exercise=TRUE}
-
-```
-
-```{r strrep-hint}
-# Try using strrep() and writeLines() in a for loop
-```
-
-```{r strrep-solution}
-for (n in 1:10) {
-  line <- str_c("|", strrep("-", 10), "|")
-  writeLines(line)
-}
-```
-
-### Exercise
-
-Recall that `iris` is a data frame with measurements of petal and sepal length and width for a few flower species. `make_scatterplot()` takes a species and two measurement variables and makes a scatterplot of the variables for that species. Complete `make_scatterplot()`. If the species is `virginica`, the `x` variable is `Sepal.Length`, and the `y` variable is `Sepal.Width`, then the title of the plot should be `"Sepal.Width vs. Sepal.Length for virginica"`
-```{r str_interp, exercise=TRUE}
-make_scatterplot <- function(species, x_var, y_var) {
-  title <- # Fill in
-  iris %>%
-    # Fill in - only use data for species
-    ggplot(aes(!!as.name(x_var), !!as.name(y_var))) +
-    # Fill in - choose the right geom
-    # Fill in - set the title
-    theme_bw()
-}
-make_scatterplot("virginica", "Sepal.Length", "Sepal.Width")
-```
-
-```{r str_interp-solution}
-make_plot <- function(species, x_var, y_var) {
-  title <- str_interp("${y_var} vs. ${x_var} for ${species}")
-  iris %>%
-    filter(Species == species) %>%
-    ggplot(aes(!!as.name(x_var), !!as.name(y_var))) +
-    geom_point() +
-    ggtitle(title) +
-    theme_bw()
-}
-make_plot("virginica", "Sepal.Length", "Sepal.Width")
-```
-
-### Optional Challenge Exercise
-
-Without hard-coding, recreate the ASCII art below. There are 8 lines, each of which has 7 hyphens in the middle.
-```
-|\-------|
-|-\------|
-|--\-----|
-|---\----|
-|----\---|
-|-----\--|
-|------\-|
-|-------\|
-```
-
-```{r challenge, exercise=TRUE}
-
-```
-
-```{r challenge-solution}
-for (n in 0:7) {
-  line <- str_c("|", strrep("-", n), "\\", strrep("-", 7 - n), "|") 
-  writeLines(line)
-}
-```
-
-
-## Regular Expressions
-
-A **regular expression** is a string specifying a pattern that other strings may or may not match. Regular expressions can be used to
-
-  - find strings matching a pattern
-  - modify substrings matching a pattern
-  - delete substrings matching a pattern
-  
-An example use of regular expressions is validation of email addresses. If a company wants to check whether a customer's email address is valid, they could check whether it matches a regular expression like [this one](https://stackoverflow.com/a/201378):
-
-```
-(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])
-```
-
-### Metacharacters
-
-Several characters have special meanings inside regular expressions. They are called **metacharacters**. These are the metacharacters:
-
-`. \ | ( ) [ ] ^ $ { } * + ?`
-
-For example, `.` matches any character.
-
-If you do not want a metacharacter to have its special meaning, you need to prepend it with **two** backslashes.
-```{r}
-str_view_all(c("$2.50", "2 dollars"), "\\.")
-```
-
-**Question:** What happens if you use only one backslash or no backslashes and why?
-```{r too_few_backslashes, exercise=TRUE}
-
-```
-
-```{r too_few_backslashes-solution}
-# Both strings match since . matches any character
-str_view_all(c("$2.50", "2 dollars"), ".")
-# Causes an error since \. isn't a valid escape sequence
-str_view_all(c("$2.50", "2 dollars"), "\.")
-```
-
-An alternative is to use `fixed()`.
-```{r}
-str_view_all(c("$2.50", "2 dollars"), fixed("."))
-```
-
-### Character Classes
-
-- `.` matches any character
-- `[abcd]` matches any one of the characters between the brackets
-- `[^abcd]` matches any character *not* between the brackets (excluding `^`)
-- `[a-d]` matches any character in the specified range; it's the same as `[abcd]`
-
-An example:
-```{r}
-str_view_all(c("$2.50", "2 dollars"), "[a-zA-Z]")
-```
-
-An alternative way to make the matching case-insensitive:
-```{r}
-str_view_all(c("$2.50", "2 dollars"), regex("[a-z]", ignore_case = TRUE))
-```
-
-
-### Shorthand
-
-- `\w` matches a "word" character, equivalent to `[0-9A-Za-z_]`, i.e., digits, letters, and the underscore
-- `\s` matches any whitespace character, including tabs and newlines
-- `\d` matches digits, equivalent to `[0-9]`
-- `\W`, `\S`, and `\D` match the opposite of the lower-case versions
-
-In the example below, we check which string contains whitespace. Note that **two** backslashes need to be used. Why?
-```{r}
-str_view_all(c("$2.50", "2 dollars"), "\\s")
-```
-
-### Grouping
-
-- `()` are used to group patterns together. This can be used to extract matches individually.
-- `\1` refers to the match to the first group, `\2` refers to the match to the second group, etc.
-
-In this example, we check which string contains a repeated letter.
-```{r}
-str_view_all(c("$2.50", "2 dollars"), "([a-z])\\1")
-```
-
-### Operators
-
-- `|` is the OR operator and allows matches of either side
-- `{}` describes how many times the preceeding character or group must occur:
-  - `{m}` must occur exactly `m` times
-  - `{m,n}` must occur between `m` and `n` times, inclusive
-  - `{m,}` Must occur at least `m` times
-- `*` means the preceeding character can appear zero or more times, equivalent to `{0,}`
-- `+` means the preceeding character must appear one or more times, equivalent to `{1,}`
-- `?` means the preceeding character can appear zero or one time, equivalent to `{0,1}`
-
-Which string has two digits in a row?
-```{r}
-str_view_all(c("$2.50", "2 dollars"), "[0-9]{2}")
-```
-
-### Anchors
-
-- `^` matches the start of a string (or line)
-- `$` matches the end of a string (or line)
-- `\b` matches a word boundary
-- `\B` matches not word boundary
-
-Which string starts with a dollar sign? Note that `$` is escaped with **two** backslashes.
-```{r}
-str_view_all(c("$2.50", "2 dollars"), "^\\$")
-```
-
-
-## Regular Expression Exercises
-
-The exercises below use this paragraph.
+## Reading Spreadsheets
+here are some example excel sheets in `readxl` package, you can find the paths by calling `readxl_example()`
 
 ```{r}
-baseball <- "According to Baseball Reference’s wins above average, The Red Sox had the best 
-outfield in baseball— one-tenth of a win ahead of the Milwaukee Brewers, 11.5 to 11.4. And 
-that’s despite, I’d argue, the two best position players in the NL this year (Christian 
-Yelich and Lorenzo Cain) being Brewers outfielders. More importantly, the distance from 
-Boston and Milwaukee to the third-place Yankees is about five wins. Two-thirds of the Los 
-Angeles Angels’ outfield is Mike Trout (the best player in baseball) and Justin Upton (a 
-four-time All-Star who hit 30 home runs and posted a 122 OPS+ and .348 wOba this year), 
-and in order to get to 11.5 WAA, the Angels’ outfield would have had to replace right 
-fielder Kole Calhoun with one of the three best outfielders in baseball this year by WAA."
+readxl_example() # some example excel sheets in readxl package
+geometry_path = readxl_example("geometry.xlsx")
+geometry_path # show location of the dataset
 ```
 
-The exercises require you to extract matches using `str_extract_all()`
+## Read excel
 
-### Exercise 1
+```{r}
+read_excel(geometry_path)
+# equivalent to
+# read_excel('/usr/local/lib/R/site-library/readxl/extdata/geometry.xlsx')
+```
 
-Extract all the capitalized words in the paragraph.
+You can change column name while reading the Excel file.
 
-```{r baseball1, exercise=TRUE}
+```{r}
+read_excel(geometry_path, col_names = c("A", "B", "C"))
+```
+
+```{r}
+deaths_path = readxl_example("deaths.xlsx")
+head(read_excel(deaths_path))
+```
+
+## using head
+
+The output says there are 5 columns unnamed and named automatically.
+
+```{r}
+head(read_excel(deaths_path, 
+    col_names = c("Name", "Profession", "Age", "Has kids", "DOB", "DOD")))
+```
+
+If there are multiple worksheets, you can read a single worksheet from a spreadsheet with `sheet` arguemnt. \ There are 4 worksheets in `datasets.xlsx: iris, mtcars, chickwts`, and `quakes`
+
+```{r}
+head(read_excel(readxl_example('datasets.xlsx')))
+head(read_excel(readxl_example('datasets.xlsx'), sheet = 'iris'))
+head(read_excel(readxl_example('datasets.xlsx'), sheet = 'mtcars'))
+```
+
+The `death` dataset looks messy. Let's clean it up! \ Let's first take a look at the spreadsheet view of `geom_death.xlsx`.
+
+## Other functions
+In read_excel function,
+
+* skip = k will skip the first k rows.
+* n_max = n will take at most n rows.
+* range = "A6:C9" will read cells from A6 to C9.
+* range = cell_rows(c(a, b)) will read rows from a to b.
+* range = cell_cols(c(a, b)) will read columns from a to b.
+
+```{r}
+read_excel(deaths_path, skip = 4, n_max = 10) # skip the first 4 rows and the fifth row turns into column names
+read_excel(deaths_path, range = "A6:C9")
+read_excel(deaths_path, range = cell_cols(c(2, 3))) # omit NA at first rows
+```
+
+You may have noticed that, there are different data types in the spreadsheet. In csv file, all values are string. In Excel files, a cell can be one of five things:
+
+* A boolean, like TRUE, FALSE, or NA
+* A number, like “10” or “10.5”
+* A datetime, which can also include time like “11/1/21” or “11/1/21 3:00 PM”
+* A text string, like “ten”
+
+## Other reader methods
+
+he readr package in tidyverse is used for importing datasets:
+
+* read_csv(): comma-separated values (CSV)
+* read_tsv(): tab-separated values (TSV)
+* read_csv2(): semicolon-separated values with , as the decimal mark
+* read_delim(): delimited files (CSV and TSV are important special cases)
+* read_fwf(): fixed-width files
+* read_table(): whitespace-separated files
+* read_log(): web log files
+
+
+## Writing to Excel
+
+```{r}
+# install.packages('writexl')
+library(writexl)
+```
+
+
+```{r}
+
+deaths = read_excel(deaths_path, skip = 4, n_max = 10)
+write_xlsx(deaths, path="deaths_cleaned.xlsx")
+```
+
+```{r}
+out <- read_xlsx("deaths_cleaned.xlsx")
+all.equal(out, deaths)
+```
+
+## Google Sheets
+
+```{r}
+# install.packages("googlesheets4")
+library(googlesheets4)
+gs4_deauth() # Call `gs4_deauth()` to prevent the attempt to get credentials.
+# gs4_auth(email = "mine@example.com") # get credentials to access restricted file. 
+```
+
+`read_sheet()` reads a Google Sheet from a URL or file id. This function is equivalent to `range_read()`
+
+```{r}
+
+penguins <- read_sheet("https://docs.google.com/spreadsheets/d/1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY/edit?usp=sharing")
+penguins2 <- read_sheet("1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY")
+all.equal(penguins, penguins2)
+head(penguins)
+```
+To get a quick view of the meta data of the sheet, use gs4_get()
+
+```{r}
+gs4_get("1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY")
+```
+
+You can obtain a list of all sheets within a Google Sheet with sheet_names().
+
+```{r}
+sheet_names("1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY")
+```
+
+Use `sheet` argument in read_sheet() to read different worksheets.
+
+```{r}
+head(read_sheet("1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY", sheet="Biscoe Island"))
+```
+
+## Exercise 1
+Read the Google Sheet titled survey from link, with survey_id as a character variable and n_pets as a numerical variable.
+
+Hint: Column Specification
+
+```{r q1, exercise = TRUE}
 
 ```
 
-```{r baseball1-hint}
-# Try using \b
+
+```{r q1-solution}
+gs4_get("1yc5gL-a2OOBr8M7B3IsDNX5uR17vBHOyWZq6xSTG2G8")
+read_sheet("1yc5gL-a2OOBr8M7B3IsDNX5uR17vBHOyWZq6xSTG2G8", col_types = "cd")
 ```
 
-```{r baseball1-solution}
-# `\b` looks for a word boundary (not just the beginning of the text snippet!)
-# `[A-Z]` matches a single capitalized letter
-# `[a-z]` matches a single lowercase letter
-# `+` means we match arbitrarily many lowercase letters
-str_extract_all(baseball, "\\b[A-Z][a-z]+")
-```
+## Exercise 2
+Read the first 6 rows (including column names) from third to fifth columns in worksheet `Dream Island` in Google Sheet file penguins using `read_sheet()` with file_id: 1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY.
 
-### Exercise 2
-
-Extract all the numbers.
-
-```{r baseball2, exercise=TRUE}
+```{r q2, exercise = TRUE}
 
 ```
 
-```{r baseball2-solution}
-str_extract_all(baseball, "\\.?\\d+\\.?\\d*")
-```
-
-### Exercise 3
-
-Extract all the hyphenated words.
-
-```{r baseball3, exercise=TRUE}
-
-```
-
-```{r baseball3-solution}
-str_extract_all(baseball, regex("[a-z]+-[a-z]+", ignore_case = TRUE))
-```
-
-### Exercise 4
-
-Extract all words with two consecutive vowels.
-
-```{r baseball4, exercise=TRUE}
-
-```
-
-```{r baseball4-solution}
-str_extract_all(baseball, regex("[a-z]*[aeiou]{2}[a-z]*", ignore_case = TRUE))
-```
-
-### Exercise 5
-
-Extract all words with a repeated letter.
-
-```{r baseball5, exercise=TRUE}
-
-```
-
-```{r baseball5-solution}
-str_extract_all(baseball, regex("[a-z]*([a-z])\\1[a-z]*", ignore_case = TRUE))
+```{r q2-solution}
+read_sheet("1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY", range="Dream Island!C1:E6")
 ```

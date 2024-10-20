@@ -1,0 +1,331 @@
+---
+title: "DATASCI 306: Lecture 13"
+subtitle: "Loading Data, Dates"
+output:
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(lubridate) # install.packages("lubridate") if you don't have this
+library(nycflights13) # install.packages("nycflights13")
+library(rvest)
+library(readxl)
+set.seed(2939394)
+```
+
+
+## Data Files
+
+How do we share data?
+
+* Plain text formats - humans can also read!
+* Binary formats - only computers can read
+* Database applications - SQL/NoSQL languages to CRUD (Create, Read, Update, Delete); data mostly stored in binary format again
+
+## Plain text delimited formats
+
+* **Plain text** files are the easiest format to share across platforms, software.
+* Somewhat less efficient for file size.
+* We often **compress** the files using zip (`.zip`) or (`.gz`), but still basically plain text
+* Organizing tabular data:
+  * Each **line** of the file is a row of a table
+  * Separate columns using a **delimiter** (if csv - comma; if tsv - tab etc.)
+
+  
+## Example, comma separated values (CSV)
+
+```
+-82.9,42.4,3043540,1703280231,Gratiot Ave & Mapleridge St,"ACCIDENT, HIT & RUN",OUIL,5422,54001,"ACCIDENT, HIT & RUN",2017/03/28 22:00:00+00
+```
+
+>* Columns separated by `,`
+>* Numeric values interpreted as given
+>* Both unescaped (`Gratiot Ave & Mapleridge St`) and escaped (`"ACCIDENT, HIT & RUN"`) strings.
+>* Other kinds of data (e.g. date-times like `2017/03/28 22:00:00+00`) just represented as strings.
+
+## Header rows
+
+Most files will include a **header row** that gives column names, but not all!
+
+Some files also have instructional text at the top which needs to be trimmed before loading.
+
+## Loading delimited files
+
+* Tidyverse has a set of built in functions `read_EXTENSION` like `read_csv` and `read_tsv` (tsv - tab separated values).
+* The built in functions return a `tibble`
+* Note that this command is part of tidyverse and is different from read.csv in R!
+
+You generally want to use read_csv over read.csv since:
+
+* It is much faster.
+* It outputs nicely formatted tibbles which you can pass into other tidyverse functions.
+
+## Example
+
+
+```{r}
+heights <- read_csv("data/heights.csv") |> print()
+
+```
+Here read_csv has told us:
+
+* what columns it found
+* also what the data types it found for them are. 
+
+Generally these will be correct but we will see examples later where it guesses wrongly and we have to manually override them.
+
+## Another Example
+
+Here is another version of heights, where we are not lucky enough to have a header telling us which columns came from where:
+
+```{r}
+read_csv("data/heights.csv") |> print()
+```
+
+Now read_csv() has erroneously assumed that the first row of data are the header names. To fix this, we need to disable the default behavior of retrieving column names by sending in extra keyword arguments:
+
+```{r}
+
+read_csv("data/heights_no_hdr.csv",  col_names = F) |> print()
+```
+
+Another way is to explicitly give the column names
+
+```{r}
+read_csv("data/heights_no_hdr.csv",  col_names = c("earn", "height", "sex", "ed", "age", "race")) |> print()
+```
+
+
+## Common issues
+
+* Extra stuff at top of file, use `skip = NUMBER` to skip lines
+* Missing values: usually cells without values, but you can override with `na = "."`
+
+To create short examples illustrating read_csv's behavior, we can specify the contents of a csv file inline
+
+```{r}
+read_csv(
+"# First row to skip
+// Second row to skip
+% Third row to skip
+1, 0 , 3
+4, 0, 6
+7, 8, 0
+", skip = 3, na = c('0'), col_names = c("a", "b", "c"))
+```
+
+## Skipping comment lines
+
+Some CSVs will come with comments, typically in the form of lines prefaced by #. You can also skip comments line by specifying a comment character.
+
+```{r}
+read_csv("
+# First comment line
+a, b, c
+# This separates the header from the data
+1, 2, 3
+4, 5, 6
+# Another comment line
+", comment = '#')
+```
+
+
+## Exercise
+
+Read in the following table using `read_csv`. Do not read the first row as header.  Make any "NONE" and 'EMPTY' values be missing in R.
+
+```{r settingcols, exercise = TRUE}
+csv <- '
+1,hello, NONE, EMPTY
+0,goodbye,-3, 100
+1,NONE,1.111111, EMPTY
+'
+```
+>* [`read_csv`](https://readr.tidyverse.org/reference/read_delim.html)
+>* [`cols`](https://readr.tidyverse.org/reference/cols.html)
+
+
+```{r settingcols-solution}
+csv <- '
+1,hello, NONE, EMPTY
+0,goodbye,-3, 100
+1,NONE,1.111111, EMPTY
+'
+read_csv(csv, na = c('NONE', 'EMPTY'), col_names = F)
+         
+
+```
+## Saving data
+
+There are complementary `write_csv` and `write_delim` functions.
+
+R has a proprietary format called "RDS". You can use `write_rds` to write a single table or the `save` function to write more than just one variable to a file. Useful for processing data in a file and then saving it for later use.
+
+## How parsing works?
+
+Automatic parsers first step is to guess each column type. The parser functions will look at the first few entries of each column and use that to try and guess the column type. In some cases this doesn't work well.
+
+```{r}
+tbl = read_csv(
+"a, b
+1, 3
+2, 4
+'b', 6
+", col_names=T
+)
+
+tbl |> print()
+```
+
+Why is column 'a' being considered as a `chr`?
+
+## Specify the datatype yourself
+
+If you already know what datatype each column has, rather than hoping it guesses correctly you can simply tell that to R:
+
+```{r}
+read_csv(
+"a, b
+1, 3
+2, 4
+1, 2
+",
+   col_types=list(
+     a = col_character(),
+     b = col_character()
+    )
+) |> print()
+
+```
+
+## Real-world examples
+Recently we saw in the news that the population of China has been shrinking two years in a row. This has major implications for China.
+
+Let's study this phenomenon in data, which will give us a chance to practice importing CSV and Excel files.
+
+First let us see the data from the source - [world bank](https://data.worldbank.org/indicator/SP.POP.TOTL)
+
+Let us also get the fertility data from the same [source](https://data.worldbank.org/indicator/SP.DYN.TFRT.IN)
+
+## Import the data
+
+Now let us download and find out which file we should choose?
+
+```{r}
+world_pop <- read_csv('data/API_SP.POP.TOTL_DS2_en_csv_v2_2431709.csv')
+```
+```{r}
+library(vroom)
+problems(world_pop)
+```
+From row-3 it is finding all problems. So what is going on?
+
+## Analyze raw file
+
+Let us take a look at the raw file
+
+We can see that the first three lines of the file contain metadata about the source of the data. We need to tell R to skip those so that the first row it considers contains the column names:
+
+```{r}
+world_pop <- read_csv('data/API_SP.POP.TOTL_DS2_en_csv_v2_2431709.csv', skip = 3)
+
+problems(world_pop)
+```
+No more problems! Let us proceed with our analysis
+
+## glimpse
+
+```{r}
+glimpse(world_pop)
+```
+
+```{r}
+head(world_pop)
+```
+
+Notice that there is also an extraneous 69-th column added to the very end of the data frame. This is because the rows of wb_pop all end in a comma.
+
+## Fertility data
+
+Let us again look at the [source](https://data.worldbank.org/indicator/SP.DYN.TFRT.IN)
+
+Let us understand the significance of fertility rate by searching on the Web.
+
+## Load the data
+
+```{r}
+world_fert <- read_csv('data/API_SP.DYN.TFRT.IN_DS2_EN_csv_v2_2010344.csv', skip = 3)
+head(world_fert)
+```
+
+## Is 2023 NA for all?
+
+```{r}
+world_fert$`2023` |> is.na() |> unique()
+```
+
+## Coming back to analyzing china
+
+How is the fertility rate falling in china?
+
+First get the relevant data only to keep it simple
+
+```{r}
+wb_fert_longer <- world_fert |> filter(`Country Name` == 'China') |>
+  pivot_longer(cols=c(`1960`:`2022`), names_to = 'year', values_to = 'fert') |> select(-`2023`, -`...69`) |> print()
+```
+
+## Plot the line
+
+```{r}
+wb_fert_longer |> ggplot(aes(x=`year`, y= `fert`)) +
+  geom_point()+
+  geom_line()
+```
+
+Overlapping x-labels. How to fix it? Let us look at the datatypes of all columns
+
+```{r}
+glimpse(wb_fert_longer)
+```
+
+## Fix the year datatype
+
+Converting year to a number does the trick!
+
+```{r}
+wb_fert_longer |> mutate(year = parse_number(year)) |> ggplot(aes(x=`year`, y= `fert`)) +
+  geom_point()+
+  geom_line()
+```
+
+## More analysis
+
+Compare the population trend with fertility trend
+
+```{r}
+world_pop |> filter(`Country Name` == 'China') |>
+  pivot_longer(cols=c(`1960`:`2022`), names_to = 'year', values_to = 'pop') |> select(-`2023`, -`...69`) |> print() -> wb_pop_longer
+```
+
+Plot the population and fertility in the same chart. Join the tables first
+
+```{r}
+wb_pop_longer |> left_join(wb_fert_longer, join_by(`Country Name`, year)) |> select(`Country Name`, fert, pop, year) |> mutate(year = parse_number(year)) -> wb_pop_fert
+
+print(wb_pop_fert)
+```
+Pivot again
+```{r}
+wb_pop_fert |> pivot_longer(cols = c(`fert`, `pop`), names_to = 'criteria', values_to = 'value') |> ggplot() + facet_grid(rows = vars(criteria), scales = "free_y") + geom_line(aes(x = year, y = value, color = criteria))
+```
+
+## Exercise 
+Any other questions that come to your mind? Explore the answers with the data.
+
