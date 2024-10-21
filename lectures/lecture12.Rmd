@@ -229,7 +229,7 @@ flights |> group_by(month, day) |> mutate(r = min_rank(-dep_delay)) |>
 ## Subqueries
 An aspect of SQL I find confusing is that you cannot filter (WHERE ...) based on a ranking condition:
 
-```{r eg, exercise = TRUE}
+```{r lec12-01, exercise = TRUE}
 q('SELECT year, month, day, dep_delay, RANK() OVER (
     PARTITION BY month, day
     ORDER BY dep_delay DESC
@@ -246,7 +246,7 @@ q('SELECT year, month, day, dep_delay, r FROM
         PARTITION BY month, day
         ORDER BY dep_delay DESC
     ) r FROM flights)
-    WHERE r <= 2
+    WHERE r = 1
 ')
 ```
 
@@ -255,39 +255,51 @@ q('SELECT year, month, day, dep_delay, r FROM
 Find the max highway miles across each manufacturer
 
 
-```{r}
-
-res <- dbSendQuery(con, "select manufacturer, max(hwy) from mpg group by manufacturer")
+```{r lec12-02, exercise = TRUE}
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "mpg", mpg, overwrite = T)
+# replace ... with your query
+res <- dbSendQuery(con, "....")
 dbFetch(res)
 dbClearResult(res)
+```
+
+```{r lec12-02-solution}
+"select manufacturer, max(hwy) from mpg group by manufacturer"
 ```
 
 ## Exercise
 How many 4 cylinder models are present in this database?
 
-```{r ex-4, exercise = TRUE}
-
+```{r lec12-03, exercise = TRUE}
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "mpg", mpg, overwrite = T)
+# replace ... with your query
+res <- dbSendQuery(con, "....")
+dbFetch(res)
+dbClearResult(res)
 ```
 
 
-```{r ex-4-solution}
-res <- dbSendQuery(con, "select count(*) from mpg where cyl = 4")
-dbFetch(res)
-dbClearResult(res)
+```{r lec12-03-solution}
+"select count(*) from mpg where cyl = 4"
 ```
 
 ## Exercise
 
-Extend the previous query to retrieve the minimum hwy value across manufacturer and model
+Extend the previous query to retrieve the minimum hwy value grouped by manufacturer and model
 
 ```{r ex-5, exercise = TRUE}
-
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "mpg", mpg, overwrite = T)
+# replace ... with your query
+res <- dbSendQuery(con, "....")
+dbFetch(res)
+dbClearResult(res)
 ```
 
 ```{r ex-5-solution}
-res <- dbSendQuery(con, "SELECT manufacturer, model, min(hwy) FROM mpg GROUP BY manufacturer, model")
-dbFetch(res)
-dbClearResult(res)
+"SELECT manufacturer, model, min(hwy) FROM mpg GROUP BY manufacturer, model"
 ```
 
 ## Using `having` clause
@@ -298,33 +310,39 @@ Here is an example; Get all destinations that have total flights to that destina
 
 ```{r}
 
-q('select dest, count(*) as total from flights group by dest having total > 10000' )
+q('SELECT dest, count(*) as total FROM flights GROUP BY dest HAVING total > 10000' )
 ```
 
 ## Exercise
-Get all the manufacturers who have 4 or more 'compact' car class
+Get all the manufacturers who have a total of 4 or more 'compact' car class
 
 ```{r ex-6, exercise = TRUE}
-
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "mpg", mpg, overwrite = T)
+# replace ... with your query
+res <- dbSendQuery(con, "....")
+dbFetch(res)
+dbClearResult(res)
 ```
 
 ```{r ex-6-solution}
-res <- dbSendQuery(con, "SELECT manufacturer, class, count(*) FROM mpg WHERE class = 'compact' GROUP BY manufacturer HAVING count(*) >= 4")
-dbFetch(res)
-dbClearResult(res)
+"SELECT manufacturer, class, count(*) FROM mpg WHERE class = 'compact' GROUP BY manufacturer HAVING count(*) >= 4"
 ```
 
 ## Exercise
 Get distinct car manufacturers in this dataset
 
 ```{r ex-7, exercise = TRUE}
-
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "mpg", mpg, overwrite = T)
+# replace ... with your query
+res <- dbSendQuery(con, "....")
+dbFetch(res)
+dbClearResult(res)
 ```
 
 ```{r ex-7-solution}
-res <- dbSendQuery(con, "SELECT DISTINCT manufacturer FROM mpg")
-dbFetch(res)
-dbClearResult(res)
+"SELECT DISTINCT manufacturer FROM mpg"
 ```
 
 Once done, it is a good idea to disconnect from the database
