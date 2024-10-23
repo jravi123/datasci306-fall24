@@ -1,6 +1,6 @@
 ---
 title: "DATASCI 306: Lecture 13"
-subtitle: "Loading Data, Dates"
+subtitle: "Loading Data"
 output:
   learnr::tutorial:
     progressive: true
@@ -85,7 +85,7 @@ Generally these will be correct but we will see examples later where it guesses 
 Here is another version of heights, where we are not lucky enough to have a header telling us which columns came from where:
 
 ```{r}
-read_csv("data/heights.csv") |> print()
+read_csv("data/heights_no_hdr.csv") |> print()
 ```
 
 Now read_csv() has erroneously assumed that the first row of data are the header names. To fix this, we need to disable the default behavior of retrieving column names by sending in extra keyword arguments:
@@ -147,8 +147,10 @@ csv <- '
 1,NONE,1.111111, EMPTY
 '
 ```
->* [`read_csv`](https://readr.tidyverse.org/reference/read_delim.html)
->* [`cols`](https://readr.tidyverse.org/reference/cols.html)
+Reference:
+
+* [`read_csv`](https://readr.tidyverse.org/reference/read_delim.html)
+
 
 
 ```{r settingcols-solution}
@@ -215,7 +217,7 @@ Let us also get the fertility data from the same [source](https://data.worldbank
 
 ## Import the data
 
-Now let us download and find out which file we should choose?
+Now let us read the downloaded data
 
 ```{r}
 world_pop <- read_csv('data/API_SP.POP.TOTL_DS2_en_csv_v2_2431709.csv')
@@ -277,19 +279,24 @@ How is the fertility rate falling in china?
 First get the relevant data only to keep it simple
 
 ```{r}
-wb_fert_longer <- world_fert |> filter(`Country Name` == 'China') |>
+wb_fert_longer <- world_fert |> 
+  filter(`Country Name` == 'China') |>
   pivot_longer(cols=c(`1960`:`2022`), names_to = 'year', values_to = 'fert') |> select(-`2023`, -`...69`) |> print()
 ```
 
 ## Plot the line
 
 ```{r}
-wb_fert_longer |> ggplot(aes(x=`year`, y= `fert`)) +
-  geom_point()+
-  geom_line()
+wb_fert_longer |> 
+  ggplot(aes(x = year, y = fert)) +
+  geom_point() +
+  geom_line() 
 ```
 
-Overlapping x-labels. How to fix it? Let us look at the datatypes of all columns
+Overlapping x-labels. How to fix it? 
+
+
+Let us look at the datatypes of all columns
 
 ```{r}
 glimpse(wb_fert_longer)
@@ -300,7 +307,9 @@ glimpse(wb_fert_longer)
 Converting year to a number does the trick!
 
 ```{r}
-wb_fert_longer |> mutate(year = parse_number(year)) |> ggplot(aes(x=`year`, y= `fert`)) +
+wb_fert_longer |> 
+  mutate(year = parse_number(year)) |>
+  ggplot(aes(x=`year`, y= `fert`)) +
   geom_point()+
   geom_line()
 ```
@@ -311,19 +320,32 @@ Compare the population trend with fertility trend
 
 ```{r}
 world_pop |> filter(`Country Name` == 'China') |>
-  pivot_longer(cols=c(`1960`:`2022`), names_to = 'year', values_to = 'pop') |> select(-`2023`, -`...69`) |> print() -> wb_pop_longer
+  pivot_longer(cols = c(`1960`:`2022`), 
+               names_to = 'year', 
+               values_to = 'pop') |> 
+  select(-`2023`, -`...69`) -> wb_pop_longer
+
+wb_pop_longer |> print()
 ```
 
 Plot the population and fertility in the same chart. Join the tables first
 
 ```{r}
-wb_pop_longer |> left_join(wb_fert_longer, join_by(`Country Name`, year)) |> select(`Country Name`, fert, pop, year) |> mutate(year = parse_number(year)) -> wb_pop_fert
+wb_pop_longer |> 
+  left_join(wb_fert_longer, join_by(`Country Name`, year)) |> 
+  select(`Country Name`, fert, pop, year) |> 
+  mutate(year = parse_number(year)) -> wb_pop_fert
 
 print(wb_pop_fert)
 ```
 Pivot again
 ```{r}
-wb_pop_fert |> pivot_longer(cols = c(`fert`, `pop`), names_to = 'criteria', values_to = 'value') |> ggplot() + facet_grid(rows = vars(criteria), scales = "free_y") + geom_line(aes(x = year, y = value, color = criteria))
+wb_pop_fert |> 
+  pivot_longer(cols = c(`fert`, `pop`), 
+               names_to = 'criteria', 
+               values_to = 'value') |> 
+  ggplot() + facet_grid(rows = vars(criteria), scales = "free_y") + 
+  geom_line(aes(x = year, y = value, color = criteria))
 ```
 
 ## Exercise 
