@@ -24,7 +24,7 @@ set.seed(2939394)
 
 How do we share data?
 
-* Plain text formats - humans can also read!
+* Plain text formats - humans can also read! Types - XML, JSON, CSV, HTML
 * Binary formats - only computers can read
 * Database applications - SQL/NoSQL languages to CRUD (Create, Read, Update, Delete); data mostly stored in binary format again
 
