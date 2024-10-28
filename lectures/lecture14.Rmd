@@ -14,6 +14,7 @@ library(learnr)
 library(tidyverse)
 library(nycflights13)
 set.seed(2939394)
+library(remotes)
 # remotes::install_github("bradleyboehmke/harrypotter")
 library(harrypotter)
 ```
@@ -322,8 +323,9 @@ Hint: `str_split` might be useful. Since a period `.` is a special character, yo
 ```
 
 ```{r last-sentence-solution}
-ch1 |> str_split("\\.") -> sentences
-sentences[[length(sentences)]]
+ch1 <- philosophers_stone[[1]]
+ch1 |> str_split("\\.") -> sentences 
+sentences[[length(sentences)]][length(unlist(sentences))]
 ```
 
 ## Exercise
