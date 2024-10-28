@@ -1,0 +1,738 @@
+---
+subtitle: "DATASCI 306: Lecture 14"
+title: "Strings, text data and date/time"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(nycflights13)
+set.seed(2939394)
+# remotes::install_github("bradleyboehmke/harrypotter")
+library(harrypotter)
+```
+
+## Today's lecture
+
+* Understand the basics of working with strings in R.
+* Convert data to strings.
+* Extract data from strings.
+* Using date/time
+
+These notes correspond to Chapter 14 and 17 of your book.
+
+## String basics
+
+A string (or "character vector" in R) is character data enclosed in double `"` or single `'` quotes.
+
+To include quotation marks inside, we need to **escape** them:
+```{r}
+mle <- "\"MLE\" stands for \"Maximum Likelihood Estimate\""
+mle
+cat(mle) # prints directly instead of displaying as escaped string
+```
+
+Which other way can you fix it?
+
+```{r}
+# another way of getting around this issue
+'"MLE" stands for "Maximum Likelihood Estimate"'
+```
+
+## Other special characters
+
+Since `\` is used to escape things, if you need a literal backslash use `\\`. 
+
+Example:
+
+New line: `\n` - use `\\n` to escape the backslash if you want `\n` to be part of the string
+
+```{r}
+cat('first line \n second line')
+
+cat('first line \\n not second line')
+```
+
+
+
+## ASCII and Unicode
+
+Early computers could only read and write the ASCII character set, essentially just roman letters, numbers and some punctuation.
+
+Nowadays, computers need to be able to understand alphabets from all over the world. For this we have Unicode.
+
+You can print characters if you know their unicode using `\u`. For example, the copyright character has unicode 00A9. Wikipedia has a [complete list](https://en.wikipedia.org/wiki/List_of_Unicode_characters).
+
+```{r}
+print("\u00A9")
+```
+
+## String functions in R
+Through the `stringr` package, `tidyverse` has a lot of useful functions for combining strings.
+
+## Combining strings
+
+If we need to make strings out of other strings, we have two (more or less identical) functions:
+
+* Old school: `paste` (joins with " ") and `paste0` (joins with "");
+* New school: `str_c` (joins with ""); used in our book
+
+```{r}
+paste('a','b','c')
+
+paste("Section", c("100", "200", "100"), 
+      "meets on", 
+      c("Tuesday", "Monday", "Wednesday"))
+```
+Same function using `str_c`
+
+
+```{r}
+str_c('a','b','c')
+
+str_c("Section", c("100", "200", "100"), 
+      "meets on", 
+      c("Tuesday", "Monday", "Wednesday"))
+```
+To separate the strings, use `sep` keyword argument
+
+```{r}
+str_c('a','b','c', sep = ", ")
+
+str_c("Section", c("100", "200", "100"), 
+      "meets on", 
+      c("Tuesday", "Monday", "Wednesday"), sep = " ")
+
+```
+
+## Exercise
+
+Join the following using a new line characters. Demonstrate using `str_c`.
+
+```{r sonnet18, exercise = TRUE}
+line1 <- "Nor shall death brag thou wander'st in his shade,"
+line2 <- "When in eternal lines to time thou grow'st:"
+line3 <- "So long as men can breathe or eyes can see,"
+line4 <- "So long lives this, and this gives life to thee."
+```
+
+```{r sonnet18-solution}
+line1 <- "Nor shall death brag thou wander'st in his shade,"
+line2 <- "When in eternal lines to time thou grow'st:"
+line3 <- "So long as men can breathe or eyes can see,"
+line4 <- "So long lives this, and this gives life to thee."
+cat(str_c(line1, line2, line3, line4, sep = '\n'))
+```
+
+
+## Properties of strings
+
+```{r, echo = FALSE}
+line1 <- "Nor shall death brag thou wander'st in his shade,"
+line2 <- "When in eternal lines to time thou grow'st:"
+line3 <- "So long as men can breathe or eyes can see,"
+line4 <- "So long lives this, and this gives life to thee."
+```
+
+The `length` function in R will tell you how many items are in a vector:
+
+```{r}
+sonnet18_end <- c(line1, line2, line3, line4)
+length(sonnet18_end)
+```
+
+To find the length of the strings in terms of characters:
+```{r}
+str_length(sonnet18_end) # base::nchar also works
+```
+
+## Flattening strings
+
+`str_flatten` will take a vector of strings and flatten them into one string.
+
+```{r}
+# list all the air carriers flying out of each airport
+distinct(flights, origin, carrier)
+distinct(flights, origin, carrier) |>
+  group_by(origin) |>
+    summarize(carrier = str_flatten(carrier, ", "))
+```
+
+
+
+## Subsetting
+
+The `str_sub` function can retrieve or change **substrings**.
+
+```{r}
+line1
+str_sub(line1, 11, 20)
+line2
+str_sub(line2, 36)
+str_sub(line2, -8)
+line4
+line4b <- line4
+str_sub(line4b, 1, 10) <- "REMOVED"
+line4b
+```
+
+
+## Splitting
+
+Here's the full sonnet as a single string:
+```{r}
+sonnet18 <- "Shall I compare thee to a summer's day?\nThou art more lovely and more temperate:\nRough winds do shake the darling buds of May,\nAnd summer's lease hath all too short a date;\nSometime too hot the eye of heaven shines,\nAnd often is his gold complexion dimm'd;\nAnd every fair from fair sometime declines,\nBy chance or nature's changing course untrimm'd;\nBut thy eternal summer shall not fade,\nNor lose possession of that fair thou ow'st;\nNor shall death brag thou wander'st in his shade,\nWhen in eternal lines to time thou grow'st:\n\tSo long as men can breathe or eyes can see,\n\tSo long lives this, and this gives life to thee."
+```
+
+Let's split that up into individual lines as strings in a vector:
+
+```{r}
+sonnet18_lines <- str_split(sonnet18, "\n") # notice use of new line
+sonnet18_lines
+```
+
+
+## `unlist` function
+
+`unlist` takes a list (or a vector of lists) as input and converts it into a vector. It essentially flattens the list structure, removing any nested lists and combining all elements into a single vector
+
+Let us take a simple character vector to understand `unlist` function 
+
+```{r}
+
+x <- list('abc','xyz')
+x[1]
+x[[1]]
+
+z <- unlist(x)
+z[1]
+z[[1]]
+```
+
+
+## Exercise
+
+**Tokenization** is the process many computer languages use to turn strings into discrete words. Use `str_split` to turn each line of `sonnet18` into individual words. Use `unlist` on the result and answer the question: how many words are there?
+
+```{r tokenize1, exercise = TRUE}
+sonnet18 <- "Shall I compare thee to a summer's day?\nThou art more lovely and more temperate:\nRough winds do shake the darling buds of May,\nAnd summer's lease hath all too short a date;\nSometime too hot the eye of heaven shines,\nAnd often is his gold complexion dimm'd;\nAnd every fair from fair sometime declines,\nBy chance or nature's changing course untrimm'd;\nBut thy eternal summer shall not fade,\nNor lose possession of that fair thou ow'st;\nNor shall death brag thou wander'st in his shade,\nWhen in eternal lines to time thou grow'st:\n\tSo long as men can breathe or eyes can see,\n\tSo long lives this, and this gives life to thee."
+```
+
+```{r tokenize1-solution}
+str_split(sonnet18, " ") |> unlist() |> length()
+```
+
+## separate_ functions
+`tidyverse` has some built-in functions designed to break apart and combine string data:
+
+* `separate_longer_delim`, `separate_longer_position`: combine multiple columns of string data into one.
+* `separate_wider_delim`, `separate_wider_position`: extract string data into multiple columns. These functions work analogously to pivot_{wider,longer}.
+
+`separate_wider_delim` converts a delimited string into multiple columns of data. separate_wider_position does the same, but uses a fixed position
+
+
+```{r}
+
+df <- tibble(x = c("a10.1.2022", "b10.2.2011", "e15.1.2015"))
+df |>  separate_wider_delim(
+    x,
+    delim = ".",
+    names = c("code", "edition", "year")
+  )
+```
+
+## Harry Potter
+
+Let's practice some string analysis by looking at the text of Harry Potter:
+
+<img src = 'images/harry-potter.jpeg' />
+
+`philosophers_stone` is a list containing 17 entries: one for each chapter of "Harry Potter and the Sorcerer's Stone" (titled differently in the U.K.). This object is created in the initialization block of this page
+
+Instead of reading Harry Potter, we will analyze it like a data set.
+
+Each entry of `philosophers_stone` is a string. There is one string per chapter, so they are pretty long. 
+
+
+```{r}
+ch1 <- philosophers_stone[[1]]
+length(philosophers_stone)
+ch1
+```
+
+## Exercise
+What is the longest (in number of characters) chapter in Philosopher's Stone?
+
+```{r longest-chapter, exercise = TRUE}
+philosophers_stone
+```
+
+```{r longest-chapter-solution}
+str_length(philosophers_stone) |> max()
+```
+
+## `str_count`
+
+Use this function to count the number of times a `pattern` is found within the string
+
+```{r}
+# How many times Harry occurs in chapter 1?
+str_count(ch1, 'Harry')
+```
+
+## `str_locate`
+
+returns the start and end position of the first match; `str_locate_all()` returns the start and end position of each match.
+
+```{r}
+str_locate(ch1, 'Harry')
+```
+
+Let is verify
+
+```{r}
+str_sub(ch1, 5243, 5247)
+```
+
+## Exercise
+What are the last 100 words of ch1?
+
+```{r last1-100, exercise=TRUE}
+ch1 <- philosophers_stone[[1]]
+```
+
+```{r last1-100-solution}
+ch1 |> str_sub(length(ch1)-101) 
+# another way
+ch1 |> str_sub(-100)
+```
+
+## Exercise
+What is the last sentence of ch1? 
+Hint: `str_split` might be useful. Since a period `.` is a special character, you have to use the expression `\\.` to use it in functions. More on this in the next class
+
+```{r last-sentence, exercise = TRUE}
+
+```
+
+```{r last-sentence-solution}
+ch1 |> str_split("\\.") -> sentences
+sentences[[length(sentences)]]
+```
+
+## Exercise
+Which chapter starts with the word `THE POTIONS MASTER`?
+
+```{r starts-with, exercise = TRUE}
+
+```
+
+```{r starts-with-solution}
+str_starts(philosophers_stone, 'THE POTIONS MASTER')
+```
+
+
+## Converting the list to tibble
+
+We may find it useful sometimes to convert the list to a tibble and then apply `tidyverse` functions. Here is the previous solution using a tibble
+
+
+```{r}
+df <- tibble(philosophers_stone)
+df |> mutate(starts_with = str_starts(philosophers_stone, 'THE POTIONS MASTER')) |> select(starts_with) |> print()
+```
+
+## Dates 
+Most of us have a pretty firm grasp on dates. But they can be more complicated than you might think. Consider these three questions from the book:
+
+* Does every year have 365 days?
+* Does every day have 24 hours?
+* Does every minute have 60 seconds?
+
+The answer to all three is "no".
+
+## Date - Types
+
+There are three different date classes in R:
+
+* A date, printed in tibble as `<date>`, represents a full day on the calendar.
+* A time within a day, printed as `<time>`, represents a specific time within an (unspecified) day.
+* A date-time is a date plus a time (tibble: `<dttm>`). A date-time uniquely identifies an instant in time (up to a given precision, usually 1 second.)
+
+There are lots of different formats, timezones, leapyears to deal with. The `lubridate` package helps:
+
+```{r}
+library(lubridate)
+```
+
+
+## Dates and date-times
+Some useful functions
+
+```{r}
+today()
+now()
+```
+
+We’ve already seen examples of date-times in the flights tibble:
+
+```{r}
+select(flights, time_hour) |> print()
+```
+
+## The `mdy`, `ymd`, and `dmy` functions
+
+Converting strings in different formats, to dates and times, is easy with these convenience functions:
+
+```{r}
+# Only date
+mdy("10/01/2022") # Oct. 1
+ymd("2022-10-01")
+dmy("01.10.2022")
+dmy("31-Jan-2017")
+dmy("31 1 2017")
+
+# Date and time
+ymd_hms("2017-01-31 20:11:59")
+mdy_hms("10/01/2022 12:01:37")
+mdy_hm("01/31/2017 08:01")
+
+```
+`UTC` stands for Coordinated Universal Time. 
+It is a standard used to establish time zones worldwide.
+EST is in the UTC-5 time zone
+
+
+`_hms` version will parse `HOURS:MINUTES:SECONDS` while `_hm` will just be `HOURS:MINTUES`. AM/PM can be included, otherwise 24 clock assumed. 
+
+## Setting Timezone
+
+We can select timezone using the nearest major city:
+```{r}
+mdy_hms("10/01/2022 12:01:37", tz = "America/Detroit")
+mdy_hms("12/01/2022 12:01:37", tz = "America/Detroit")
+```
+
+## Exercise
+
+Parse the following into dates or date times:
+```{r parsed, exercise = TRUE}
+dt1 <- "31/10/89"
+dt2 <- c("2022-07-01 3:10am",
+         "1852-01-15 7:00pm")
+```
+
+
+```{r parsed-solution}
+dt1 <- "31/10/89"
+dt2 <- c("2022-07-01 3:10am",
+         "1852-01-15 7:00pm")
+dmy(dt1)
+ymd_hm(dt2)
+```
+
+## using `as_datetime`
+
+Sometimes you can get away with calling as_datetime()
+
+```{r}
+as_datetime("2017-01-02 20:11:59")
+```
+
+But not always
+```{r}
+as_datetime("01-02-2017 20:11:59")
+```
+
+## `parse_datetime`
+Another convenience function to use when as_datetime fails
+
+```{r}
+parse_datetime("22/10/1, 10:01:00", 
+               format = "%y/%m/%d, %H:%M:%S")
+```
+
+>* Year: four digit `"%Y"`, two digit `"%y"`
+>* Month: number `"%m"`, abbreviation `%b`, full name `%B`
+>* Day: number in month `"%d"`
+>* Hours:minutes:seconds: `"%H:%M:%S"`
+>* See `parse_datetime` documentation for more
+
+## using `make_date` and `make_datetime`
+
+These functions can make dates from individual (numerical) components:
+
+```{r}
+make_datetime(2024, 3, 5, 10, 00, 59, tz = "EDT")
+make_date(2024, 01, 10)
+```
+
+## The epoch
+
+UNIX systems sometimes represent time as "the number of seconds which have elapsed since 1-1-1970." This date is known as "the epoch". So you may occasionally come across date-times that look like:
+
+```{r}
+now() |> as.integer()
+```
+To convert these to date format you can use as_datetime:
+
+```{r}
+as_datetime(3600 * 24)  # 24 hours after the epoch
+```
+
+
+
+
+
+## Extracting components
+
+```{r}
+right_now <- now()
+day(right_now) # same as mday()
+month(right_now)
+year(right_now)
+yday(right_now) # day within year ("Julian date")
+wday(right_now) # day within week, starting with Sunday
+hour(right_now)
+minute(right_now)
+second(right_now)
+```
+
+## Time Math 
+
+```{r}
+ymd("2023/01/04") - mdy("12/16/2022")
+```
+
+The `seconds`, `minutes`, `hours`, `days`, `weeks` can be used to get offsets:
+```{r}
+right_now <- now()
+right_now
+right_now + minutes(10)
+right_now + weeks(7)
+```
+
+## Time spans
+
+After doing math, you might want to convert the units.
+
+```{r}
+# Days to Last day of class!
+semester_end <- dmy_hms("09122024 23:59:59") - now()
+# difftime object is returned
+
+sed <- as.duration(semester_end)
+
+as.integer(sed, "days")
+as.numeric(sed, "minutes")
+
+```
+You may use update function to update a specific part of the date
+
+```{r}
+(d = today() - update(today(), day = 26))
+```
+
+## Durations
+There are equivalent `d*` functions (`dyears`, etc) for constructing durations directly.
+
+Any time part can be converted to seconds using duration class
+
+```{r}
+as.duration(1234)
+dseconds(10)
+dweeks(3)
+```
+
+
+## Arithmetic with duration
+
+Arithmetic with durations works as you would expect:
+
+```{r}
+
+2 * dyears(1)
+dyears(1) + dweeks(12) + dhours(15)
+```
+
+You have to be careful when adding durations and dates. What is 1 day after March 8th, 2025 at 1pm?
+
+```{r}
+# But what happened to this addition?
+march8 = mdy_hm("March. 8, 2025 13:00PM", tz="America/Detroit")
+march8 + ddays(1)
+
+# this seems fine
+march9 = mdy_hm("March. 9, 2025 13:00PM", tz="America/Detroit")
+march9 + ddays(1)
+```
+
+You can use methods of periods from lubridate instead
+
+```{r}
+march8 = mdy_hm("March. 8, 2025 13:00PM", tz="America/Detroit")
+march8 + days(1)
+
+```
+## Exercise
+
+Parse these dates.
+
+* What's the range of the dates? 
+* What is the mean date?
+* What is the median date? 
+* Suppose you want reminders of the anniversary of these dates in the coming year one month in advance. Find the dates of the reminders.
+
+```{r diffex, exercise = TRUE}
+ds <- c("1981-09-25", "1982-03-06", "2010-12-14", "2012-10-18", "2019-04-03")
+```
+
+```{r diffex-solution}
+ds <- c("1981-09-25", "1982-03-06", "2010-12-14", "2012-10-18", "2019-04-03")
+
+# parse as year-month-day format
+ds_parsed <- ymd(ds)
+
+# range
+range(ds_parsed)
+# or
+min(ds_parsed)
+max(ds_parsed)
+
+# mean and median
+mean(ds_parsed)
+median(ds_parsed)
+
+# setting reminders
+## method 1
+year_diff <- year(today()) - year(ds_parsed)
+ds_this_year <- ds_parsed + years(year_diff) - months(1)
+if_else(ds_this_year < today(), ds_this_year + years(1), ds_this_year) 
+
+## method 2
+ds_parsed_2 <- ds_parsed - months(1)
+year(ds_parsed_2) <- year(today())
+ds_parsed_2 + if_else(ds_parsed_2 < today(), years(1),  years(0))
+```
+
+
+
+## Revisiting of some common operations on Date columns
+
+```{r}
+aatemp <- read_csv("data/ann_arbor_weather.csv.gz")
+aatemp |> select(DATE) |> head(3)
+
+
+## Finding maximum TMAX per year-month 
+aatemp |> group_by(year(DATE), month(DATE)) |> 
+  summarize(m = max(TMAX, na.rm = TRUE)) |>
+  arrange(desc(m)) |> head(5)
+
+## limiting to a specific date range
+aatemp |> filter(DATE >= "2018-01-01", DATE <= "2018-03-31") |>
+  nrow() # 31 + 28 + 31
+```
+
+## Exercise
+
+Using the `weather` table in the `nycfights13` package, compute the average temperature at each airport (`origin`) between 9am and 15pm on September 1, 2013 (see the `time_hour` column).
+
+```{r nyc0901temp, exercise = TRUE}
+
+```
+
+
+```{r nyc0901temp-solution}
+
+filter(weather, time_hour >= "2013-09-01 09:00:00", time_hour <= "2013-09-01 17:00:00") |>
+  group_by(origin) |> summarize(mean(temp))
+```
+
+## Exercise
+
+The `nyc flights` table has scheduled as well as actual arrival and departure times. Let's create a date-time variable from the actual departure time.
+
+First we need to take note of the fact that dep_time and arr_time are in a weird format:
+
+```{r}
+flights |> select(dep_time, sched_dep_time, arr_time, sched_arr_time, year, month, day) |> head()
+```
+
+Now convert the values to dttm
+
+```{r nycdate, exercise = TRUE}
+
+```
+
+```{r nycdate-solution}
+flights_dt <- flights |>
+  mutate(across(c(dep_time, sched_dep_time, arr_time, sched_arr_time), ~ make_datetime(year, month, day, . %/% 100, . %% 100)))
+```
+## Analysis
+
+Now we can use built in R command to query and plot these data based on actual departure time
+
+```{r}
+
+flights_dt <- flights |>
+  mutate(across(c(dep_time, sched_dep_time, arr_time, sched_arr_time), ~ make_datetime(year, month, day, . %/% 100, . %% 100)))
+
+flights_dt |>
+  filter(dep_time < ymd(20130130), dep_time >= ymd(20130120)) |>
+  ggplot(aes(x = dep_time)) +
+  geom_density(bw = 3*3600)
+```
+
+**Histogram**
+
+Let us also plot a histogram 
+
+```{r}
+flights_dt |>
+  filter(dep_time < ymd(20130130), dep_time >= ymd(20130120)) |>
+  ggplot(aes(x = dep_time)) +
+  geom_histogram()
+```
+
+Notice that this command and resulting graph looks much nicer than if we did not use the date classes:
+
+* The filter on dep_time looks more natural than filter(day < 2, month == 1, year == 2013).
+* We can easily express the bin-width of 600 seconds in geom_freqpoly(binwidth = 600). When you use date-times in a numeric context (like in a histogram), 1 means 1 second; for dates, 1 means 1 day.
+* The plot x axis has nice readable labels.
+
+## More analysis
+
+By extracting the minute component of scheduled departure time, we uncover a surprising pattern:
+
+```{r}
+flights_dt |>
+  mutate(minute = minute(dep_time)) |>
+  group_by(minute) |>
+  summarise(
+    avg_delay = mean(dep_delay, na.rm = TRUE)) |>
+  ggplot(aes(minute, avg_delay)) +
+    geom_line() + labs(x="minute(dep_time)")
+```
+
+But when grouped by scheduled departure, time the delays seem to be random:
+
+```{r}
+sched_dep <- flights_dt |>
+  mutate(minute = minute(sched_dep_time)) |>
+  group_by(minute) |>
+  summarise(
+    avg_delay = mean(dep_delay, na.rm = TRUE),
+    n = n())
+
+ggplot(sched_dep, aes(minute, avg_delay)) +
+  geom_line()
+     
+```
+

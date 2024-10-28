@@ -1,0 +1,719 @@
+---
+title: "DATASCI 306: Lab 8"
+author: "Your Name"
+output: 
+  learnr::tutorial:
+    progressive: true
+runtime: shiny_prerendered
+---
+
+## Set up
+
+```{r installPackages, echo=FALSE, include=FALSE, message=FALSE}
+# This just checks if students need to install some packages that they might 
+# not have.
+if (!require(Lahman)) 
+  install.packages("Lahman", repos = "http://cran.us.r-project.org")
+```
+
+```{r setup, eval=TRUE, include=FALSE, message=FALSE, echo=FALSE}
+library(Lahman) #
+library(learnr)     # For interactive exercises
+library(lubridate)
+library(tidyverse)  # For dplyr, stringr
+
+library(nycflights13) # For date time questions 
+
+tutorial_options(exercise.reveal_solution=TRUE)
+```
+
+## Today's Content
+
+-   Strings and Regular Expressions
+-   Dates and times
+
+
+## Strings
+
+Recall that a **string** is a sequence of characters.
+
+Below is an example of a string as it would appear on paper.
+
+```         
+backyard
+```
+
+Strings in R work differently than they do on paper. In R, a string **must either begin and end with a double quote `"` or begin and end with a single quote `'`.**
+
+```{r}
+"backyard"
+'backyard'
+```
+
+**Question:** What would happen if you entered `"backyard"` without the quotes and why?
+
+```{r no_quotes, exercise=TRUE}
+
+```
+
+```{r no_quotes-solution}
+backyard
+# Without the quotes, the interpreter would assume that backyard is an
+# object that we want to print. It wouldn't be able to find backyard because
+# it doesn't exist and would then throw an error.
+```
+
+`writeLines()` takes the R version of a string and shows us the paper version.
+
+```{r, comment=NA}
+writeLines("backyard")
+```
+
+Certain characters are inserted in strings using **escape sequences**. An escape sequence starts with a backslash `\`. For example, the escape sequence for `tab` is `\t`. The backslash combines with the next character to form an escape sequence. See the help page on `Quotes` for the list of valid escape sequences in R. This is how a tab would be inserted in the previous string.
+
+```{r}
+"back\tyard"
+```
+
+This may be more natural, but it's worse because it's ambiguous.
+
+```{r}
+"back    yard"
+```
+
+To include a backslash, use the escape sequence `\\`.
+
+```{r}
+"back\\yard"
+```
+
+Another commonly used escape sequence is the newline escape sequence. A newline represents the start of a new line.
+
+```{r}
+"back\nyard"
+```
+
+**Question:** What would happen if you tried to insert a tab, or a backslash, or a newline in the middle of `"backyard"` without using an escape sequence and why?
+
+```{r escape_seqs, exercise=TRUE}
+
+```
+
+```{r escape_seqs-solution}
+# Inserting a tab by hitting the tab key doesn't work. In the console, it would
+# bring up the autocomplete box.
+# Inserting a backslash with just one backslash causes \y to be interpreted as
+# an escape sequence, which causes an error as \y isn't a valid escape
+# sequence.
+# Inserting a newline by hitting the return key seems to work, but R seems to
+# think that the code has a mistake
+```
+
+Here are the outputs of `writeLines()` for the three modifications of `"backyard"`. They look the way they would on paper.
+
+```{r, comment=NA}
+writeLines("back\tyard")
+writeLines("back\\yard")
+writeLines("back\nyard")
+```
+
+Since quotes are used to mark the start and end of an R string, an escape sequence must be used to put a quote in the middle of an R string if it's of the same type as the start and end quotes.
+
+```{r, comment=NA}
+"back\"yard" 
+writeLines("back\"yard")
+```
+
+**Question:** What happens if you don't escape and why?
+
+```{r no_escaping, exercise=TRUE}
+
+```
+
+```{r no_escaping-solution}
+# The interpreter sees the middle quote and thinks that the string has ended,
+# but then sees another character, which doesn't make any sense, so it throws
+# an error
+"back"yard"
+```
+
+However, if the quote is of the other type, escaping isn't necessary.
+
+```{r, comment=NA}
+"back'yard"
+writeLines("back'yard")
+```
+
+## Strings: More Functions
+
+We've talked about several functions for working with strings: `str_c()`, `str_length()`, `str_sub()`, `str_split()`, etc. Some additional useful string functions are described below.
+
+
+`str_interp()` makes a string from a template by inserting the values of variables. This can be very useful when making titles for plots. Note that a variable must be enclosed in braces and a dollar sign must be put before the left brace.
+
+```{r}
+x <- 1
+y <- 2
+z <- 3
+str_interp("${x} + ${y} = ${z}")
+```
+
+
+### Exercise
+
+Recall that `iris` is a data frame with measurements of petal and sepal length and width for a few flower species. `make_scatterplot()` takes a species and two measurement variables and makes a scatterplot of the variables for that species. Complete `make_scatterplot()`. If the species is `virginica`, the `x` variable is `Sepal.Length`, and the `y` variable is `Sepal.Width`, then the title of the plot should be `"Sepal.Width vs. Sepal.Length for virginica"`
+
+```{r str_interp, exercise=TRUE}
+make_scatterplot <- function(species, x_var, y_var) {
+  title <- # Fill in
+  iris |>
+    # Fill in - only use data for species
+    ggplot(aes(!!as.name(x_var), !!as.name(y_var))) +
+    # Fill in - choose the right geom
+    # Fill in - set the title
+    theme_bw()
+}
+make_scatterplot("virginica", "Sepal.Length", "Sepal.Width")
+```
+
+```{r str_interp-solution}
+make_plot <- function(species, x_var, y_var) {
+  title <- str_interp("${y_var} vs. ${x_var} for ${species}")
+  iris |>
+    filter(Species == species) |>
+    ggplot(aes(!!as.name(x_var), !!as.name(y_var))) +
+    geom_point() +
+    ggtitle(title) +
+    theme_bw()
+}
+make_plot("virginica", "Sepal.Length", "Sepal.Width")
+```
+
+
+
+## Regular Expressions
+
+A **regular expression** is a string specifying a pattern that other strings may or may not match. Regular expressions can be used to
+
+-   find strings matching a pattern
+-   modify substrings matching a pattern
+-   delete substrings matching a pattern
+
+An example use of regular expressions is validation of email addresses. If a company wants to check whether a customer's email address is valid, they could check whether it matches a regular expression like [this one](https://stackoverflow.com/a/201378):
+
+```         
+(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])
+```
+
+### Metacharacters
+
+Several characters have special meanings inside regular expressions. They are called **metacharacters**. These are the metacharacters:
+
+`. \ | ( ) [ ] ^ $ { } * + ?`
+
+For example, `.` matches any character.
+
+If you do not want a metacharacter to have its special meaning, you need to prepend it with **two** backslashes.
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), "\\.")
+```
+
+**Question:** What happens if you use only one backslash or no backslashes and why?
+
+```{r too_few_backslashes, exercise=TRUE}
+
+```
+
+```{r too_few_backslashes-solution}
+# Both strings match since . matches any character
+str_view_all(c("$2.50", "2 dollars"), ".")
+# Causes an error since \. isn't a valid escape sequence
+str_view_all(c("$2.50", "2 dollars"), "\.")
+```
+
+An alternative is to use `fixed()`.
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), fixed("."))
+```
+
+### Character Classes
+
+-   `.` matches any character
+-   `[abcd]` matches any one of the characters between the brackets
+-   `[^abcd]` matches any character *not* between the brackets (excluding `^`)
+-   `[a-d]` matches any character in the specified range; it's the same as `[abcd]`
+
+An example:
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), "[a-zA-Z]")
+```
+
+An alternative way to make the matching case-insensitive:
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), regex("[a-z]", ignore_case = TRUE))
+```
+
+### Shorthand
+
+-   `\w` matches a "word" character, equivalent to `[0-9A-Za-z_]`, i.e., digits, letters, and the underscore
+-   `\s` matches any whitespace character, including tabs and newlines
+-   `\d` matches digits, equivalent to `[0-9]`
+-   `\W`, `\S`, and `\D` match the opposite of the lower-case versions
+
+In the example below, we check which string contains whitespace. Note that **two** backslashes need to be used. Why?
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), "\\s")
+```
+
+### Grouping
+
+-   `()` are used to group patterns together. This can be used to extract matches individually.
+-   `\1` refers to the match to the first group, `\2` refers to the match to the second group, etc.
+
+In this example, we check which string contains a repeated letter.
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), "([a-z])\\1")
+```
+
+### Operators
+
+-   `|` is the OR operator and allows matches of either side
+-   `{}` describes how many times the preceeding character or group must occur:
+    -   `{m}` must occur exactly `m` times
+    -   `{m,n}` must occur between `m` and `n` times, inclusive
+    -   `{m,}` Must occur at least `m` times
+-   `*` means the preceeding character can appear zero or more times, equivalent to `{0,}`
+-   `+` means the preceeding character must appear one or more times, equivalent to `{1,}`
+-   `?` means the preceeding character can appear zero or one time, equivalent to `{0,1}`
+
+Which string has two digits in a row?
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), "[0-9]{2}")
+```
+
+### Anchors
+
+-   `^` matches the start of a string (or line)
+-   `$` matches the end of a string (or line)
+-   `\b` matches a word boundary
+-   `\B` matches not word boundary
+
+Which string starts with a dollar sign? Note that `$` is escaped with **two** backslashes.
+
+```{r}
+str_view_all(c("$2.50", "2 dollars"), "^\\$")
+```
+
+## Regular Expression Exercises
+
+The exercises below use this paragraph.
+
+```{r}
+baseball <- "According to Baseball Reference’s wins above average, The Red Sox had the best 
+outfield in baseball— one-tenth of a win ahead of the Milwaukee Brewers, 11.5 to 11.4. And 
+that’s despite, I’d argue, the two best position players in the NL this year (Christian 
+Yelich and Lorenzo Cain) being Brewers outfielders. More importantly, the distance from 
+Boston and Milwaukee to the third-place Yankees is about five wins. Two-thirds of the Los 
+Angeles Angels’ outfield is Mike Trout (the best player in baseball) and Justin Upton (a 
+four-time All-Star who hit 30 home runs and posted a 122 OPS+ and .348 wOba this year), 
+and in order to get to 11.5 WAA, the Angels’ outfield would have had to replace right 
+fielder Kole Calhoun with one of the three best outfielders in baseball this year by WAA."
+```
+
+The exercises require you to extract matches using `str_extract_all()`
+
+### Exercise 1
+
+Extract all the capitalized words in the paragraph.
+
+```{r baseball1, exercise=TRUE}
+
+```
+
+```{r baseball1-hint}
+# Try using \b
+```
+
+```{r baseball1-solution}
+# `\b` looks for a word boundary (not just the beginning of the text snippet!)
+# `[A-Z]` matches a single capitalized letter
+# `[a-z]` matches a single lowercase letter
+# `+` means we match arbitrarily many lowercase letters
+str_extract_all(baseball, "\\b[A-Z][a-z]+")
+```
+
+### Exercise 2
+
+Extract all the numbers.
+
+```{r baseball2, exercise=TRUE}
+
+```
+
+```{r baseball2-solution}
+str_extract_all(baseball, "\\.?\\d+\\.?\\d*")
+```
+
+### Exercise 3
+
+Extract all the hyphenated words.
+
+```{r baseball3, exercise=TRUE}
+
+```
+
+```{r baseball3-solution}
+str_extract_all(baseball, regex("[a-z]+-[a-z]+", ignore_case = TRUE))
+```
+
+### Exercise 4
+
+Extract all words with two consecutive vowels.
+
+```{r baseball4, exercise=TRUE}
+
+```
+
+```{r baseball4-solution}
+str_extract_all(baseball, regex("[a-z]*[aeiou]{2}[a-z]*", ignore_case = TRUE))
+```
+
+### Exercise 5
+
+Extract all words with a repeated letter.
+
+```{r baseball5, exercise=TRUE}
+
+```
+
+```{r baseball5-solution}
+str_extract_all(baseball, regex("[a-z]*([a-z])\\1[a-z]*", ignore_case = TRUE))
+```
+
+## Dates and times
+
+Now, we turn our attention to working with dates and times in R. For this portion of the lab we will focus on the `lubridate` package.
+
+### Creating date/times
+
+There are three types of date/time data that refer to an instance in time:
+
+-   A **date**. Tibbles print this as `<date>`.
+-   A **time**. Tibbles print this as `<time>`.
+-   A **date-time** is a date plus a time: it uniquely identifies an instant in time (typically to the nearest second). Tibbles print this as `<dttm>`. Base R calls these POSIXct.
+
+We will focus on dates and date-times.
+
+The first thing to know about working with date-times in R (and other langauges) are date-time formats. These are standard across many programming languages and decribe a date component using a `%` followed by a single character.
+
+While there are many date-time format components there are only a few that are truly necessary to know as described in this table:
+
+| Type  | Code | Meaning           | Example   |
+|-------|------|-------------------|-----------|
+| Year  | %Y   | 4 digit year      | 2021      |
+|       | %y   | 2 digit year      | 21        |
+| Month | %m   | number            | 2         |
+|       | %b   | Abbreviated name  | Feb       |
+|       | %B   | Full name         | Februrary |
+| Day   | %d   | Two digits        | 02        |
+|       | %e   | One or two digits | 2         |
+| Time  | %H   | 24-hour hour      | 13        |
+|       | %M   | Minutes           | 35        |
+|       | %S   | Seconds           | 45        |
+
+For example, %Y-%m-%d specifies a date that’s a year, -, month (as number) -, day such as `2023-02-13`.
+
+`lubridate` provides functions that automatically detect these formats so we typically do not need to specify them directly. One scenario where you might need to manually specify the date-time format is when reading data into R, as shown in the toy exmaple below.
+
+```{r}
+csv <- "
+  date
+  01/02/15
+"
+read_csv(csv, col_types = cols(date = col_date("%m/%d/%y")))
+```
+
+We must be careful as there are multiple ways we could interpret this date value depending on how we specify the format:
+
+```{r}
+read_csv(csv, col_types = cols(date = col_date("%d/%m/%y")))
+read_csv(csv, col_types = cols(date = col_date("%y/%m/%d")))
+```
+
+We typically generate date-time variables from strings. The package `lubridate` provides a convenient set of functions that automatically determine the date-time formats. To use the lubridate functions identify the date the order at which year, month, and day appear in the date and then arrange "y", "m", and "d" in the same order. The sequence of "y", "m", and "d" gives the name of the function.
+
+See the example below. Note that the specific format is not important as long as we know the date components come in the order year, month, day.
+
+```{r}
+ymd("2020-01-31")
+ymd("2020/01/31")
+ymd("20200131")
+```
+
+To work with date-time variables we simply add an underscore to the above functions with one or more of "h", "m", "s" depending on whether hours, minutes, or seconds appear in the date.
+
+```{r}
+ymd_hms("2017-01-31 20:11:59")
+```
+
+`lubridate` also provides functions for "rounding" dates.
+
+```{r}
+floor_date(ymd_hms("2017-01-31 20:11:59"), "minute")
+floor_date(ymd_hms("2017-01-31 20:11:59"), "hour")
+floor_date(ymd_hms("2017-01-31 20:11:59"), "day")
+floor_date(ymd_hms("2017-01-31 20:11:59"), "month")
+floor_date(ymd_hms("2017-01-31 20:11:59"), "year")
+```
+
+We can also build date variables from inidividual date components.
+
+```{r}
+make_datetime(2013, 3, 13, 10, 30)
+```
+
+If need we can specify the timezone (this goes for other `lubridate` functions that build date-time variables).
+
+```{r}
+make_datetime(2013, 3, 13, 10, 30, tz = "EST")
+```
+
+Let's look at an example fo creating date-time variables using the flights dataset from `nycflights13`.
+
+Here we have numeric variables that represent the year, month, day, hour, and minute of the flight.
+
+```{r}
+flights %>% select(year, month, day, hour, minute, sched_dep_time) %>% head()
+```
+
+```{r}
+flights %>%
+    select(year, month, day, hour, minute, time_hour) %>%
+    mutate(departure = make_datetime(year, month, day, hour, minute)) %>% head()
+```
+
+We can also easily plot date-times with `ggplot`. Note for histograms the unit for binwidth is seconds so in following plot a bindwith of 600 represents 10 minutes.
+
+```{r}
+flights %>%
+    select(year, month, day, hour, minute, time_hour) %>%
+    mutate(departure = make_datetime(year, month, day, hour, minute)) %>%
+    filter(day == 2, month == 1) %>%
+    ggplot(aes(x = departure)) +
+    geom_histogram(binwidth = 600) # 600 s = 10 minutes
+```
+
+### UnixEpoch
+
+Sometimes dates/times are reperesented as numeric increments from the "UnixEpoch" 1970-01-01. This means that numeric values are interpreted either as seconds or days since 1970-01-01. If we interpret the numeric value as days we can use `as_date` to get a date variable, otherwise use `as_datetime` to get a date-time variable.
+
+```{r}
+as_date(365)
+as_datetime(60)
+```
+
+### Getting components
+
+Sometimes we start with a date-time variable and want to work with specific date-time components. `lubridate` also provides packages for obtaining these components.
+
+```{r}
+datetime <- ymd_hms("2026-07-08 12:34:56")
+
+
+year(datetime)
+month(datetime)
+mday(datetime)
+yday(datetime)
+wday(datetime)
+```
+
+We have the option of extracting date components as a `factor` variable.
+
+```{r}
+month(datetime, label = TRUE)
+wday(datetime, label = TRUE, abbr = FALSE)
+```
+
+Using these functions we can also modify datetimes in the following manner:
+
+```{r}
+datetime
+
+year(datetime) <- 2030
+month(datetime) <- 01
+
+
+hour(datetime) <- hour(datetime) + 1
+
+datetime
+```
+
+### Time Spans
+
+We may also want to do arithmetic with date-time variables. This results in three classes of time spans:
+
+-   **Durations**, which represent an exact number of seconds.
+-   **Periods**, which represent human units like weeks and months.
+-   **Intervals**, which represent a starting and ending point.
+
+Subtracting two date-times yields a difftime class object which records a time span of seconds, minutes, hours, days, or weeks.
+
+
+`lubridate` uses **duration** which always uses seconds to maintain consistency.
+
+
+The are a number of functions that help us work with durations:
+
+```{r}
+dminutes(1)
+ddays(0:5)
+
+dhours(10) + ddays(1:3)
+```
+
+These functions allow us to conveniently do arithmetic with date-times
+
+```{r}
+ymd_hms("2026-07-08 12:34:56") + dhours(2)
+
+ymd_hms("2026-07-08 12:34:56") - dweeks(2)
+
+ymd_hms("2026-07-08 12:34:56") - ddays(1:3)
+```
+
+**Periods** are time spans that work with human units such as days and months. Similar to **durations** `lubridate` contains functions that allow us to use arithmetic to build periods.
+
+```{r}
+hours(c(12, 24))
+months(1:4)
+
+years(1) + months(6)
+
+years(1) + months(4)
+```
+
+As with **durations** we can use **periods** to modify date-time variables
+
+```{r}
+today() + months(6)
+```
+
+Using **periods** are beneficial for processing date-time variables when considering changes in date-times as a result of day light savings or leap year.
+
+We can see below that since **durations** are in terms of seconds we don't account for daylight savings.
+
+```{r}
+ ymd_hms("2023-03-11 03:00:00", tz = "America/New_York") + ddays(1)
+
+ ymd_hms("2023-03-11 03:00:00", tz = "America/New_York") + days(1) 
+```
+
+The lengths of years and days will vary depending on the specific date. Some years have 365 days while other have 366. The length of a day differs depending on whether it is daylight savings time. As a result **durations** are defined as the number of seconds per average year or day. 
+
+Let us take this example: 
+
+```{r}
+
+nov_2nd = mdy_hm("November 2, 2024 13:00PM", tz="America/Detroit")
+
+# notice the time
+nov_2nd + ddays(1) 
+
+nov_2nd + days(1)
+```
+
+We can use **intervals**, to evaluate the precise time span for a particular interval of time. You can create an interval by writing start `%--%` end:
+
+```{r}
+y2023 <- ymd("2023-01-01") %--% ymd("2024-01-01")
+y2023
+y2023 / days(1)
+```
+
+## Dates and Times Exercises
+
+1.) Plot the average depature delay per hour for each day of the week.
+
+```{r datetime1, exercise=TRUE}
+
+```
+
+```{r datetime1-solution}
+flights %>%
+  mutate(
+    dep_hour = hour(time_hour),  # Extract hour from dep_time
+    day_of_week = wday(time_hour, label = TRUE)  # Get weekday as a factor
+  ) |> 
+  group_by(day_of_week, dep_hour)  |>
+  summarise(avg_dep_delay = mean(dep_delay, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = dep_hour, y = avg_dep_delay)) +
+  geom_col() +
+  labs(
+    title = "Average Departure Delay per Hour by Day of the Week",
+    x = "Hour of Day (24-hour format)",
+    y = "Average Departure Delay (minutes)"
+  ) +
+  scale_x_continuous(breaks = 0:23) +  # Set x-axis to show each hour
+  facet_wrap(~day_of_week) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+2.) Convert `arr_time` and `dep_time` to date-time variables. Calculate their difference and compare the result to air_time. Compare this to taking the difference of `arr_time` and `dep_time` directly. For simplicity, assume all flights are not overnight flights.
+
+*Hint* 1: You'll probably need to consider the different time zones between destination and origin. How can we incorporate the airports dataset to account for this?
+
+*Hint* 2: Note that `dep_time` and `arr_time` are in HHMM format (e.g 513 is 5 hours and 13 minutes).
+
+*Hint* 3:The function `%/%` is integer division and `%%` returns the remainder from divison so `513 %/% 100` returns 5 and `513 %% 100` returns 13. Use these function with your knowledge of `dep_time` and `arr_time` to construct a date time variable.
+
+*Hint* 4: Checkout `difftime` function from `lubridate`:
+
+*Hint* 5: This might be helpful: <https://stackoverflow.com/questions/49105472/how-to-convert-whole-column-of-dates-times-from-one-time-zone-to-another-in-r>
+
+```{r datetime2, exercise=TRUE}
+
+```
+
+
+```{r datetime2-solution, exercise=TRUE}
+flights_q2 <- flights |>
+  mutate(
+    dep_hour = dep_time %/% 100,  # Integer division to get the hour
+    dep_min = dep_time %% 100,    # Remainder to get the minutes
+    arr_hour = arr_time %/% 100,
+    arr_min = arr_time %% 100,
+    dep_datetime = make_datetime(year, month, day, dep_hour, dep_min),
+    arr_datetime = make_datetime(year, month, day, arr_hour, arr_min)
+  ) |>
+  left_join(airports |> select(faa, tzone), by = c("origin" = "faa"))  |>
+  rename(origin_tz = tzone) |>
+  left_join(airports |> select(faa, tzone), by = c("dest" = "faa")) %>%
+  rename(dest_tz = tzone) |>
+  mutate(
+    # create datetimes
+    dep_datetime =  with_tz(dep_datetime,tz = origin_tz), 
+    arr_datetime =  with_tz(arr_datetime, tz = dest_tz),
+    est_air_time = as.numeric(difftime(arr_datetime, dep_datetime, units = "mins"))
+  ) 
+  
+
+flights_q2 |>
+  mutate(error = est_air_time - air_time) |>
+  ggplot(aes(x=error)) +
+  geom_histogram()
+
+```
+
