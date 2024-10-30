@@ -1,0 +1,381 @@
+---
+subtitle: "DATASCI 306: Lecture 15"
+title: "Regex"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+set.seed(2939394)
+library(harrypotter)
+ch1 <- philosophers_stone[[1]]
+```
+
+## Today's lecture
+* Understand basic regular expressions.
+* Use regular expressions to extract data from text.
+
+These notes correspond to Chapter 16 of your book.
+
+## Revisiting escape sequence `\`
+
+We see that the print statement does not quite display the newline on the console
+
+```{r}
+print('abc \n abc')
+```
+
+However using cat function gets us the new line
+
+```{r}
+cat('abc \nabc')
+```
+
+We can also use writeLines to get around this issue
+
+```{r}
+writeLines('abc \tabc')
+```
+
+## raw strings to the rescue
+Sometimes adding the escape sequence to escape a series of special characters can become very confusing. Let us understand this example
+
+```{r}
+tricky <- "double_quote <- \"\\\"\" # or '\"' single_quote <- '\\'' # or \"'\""
+
+cat(tricky)
+```
+
+gosh too many escape sequences make it confusing!
+
+Instead let us construct `raw` strings using `r` 
+
+```{r}
+simple <- r"(double_quote <- "\"" # or '"' single_quote <- '\'' # or "'")"
+cat(simple)
+```
+
+## Regular expressions
+
+Regular expressions (regex, regexps) are a programming language that allows you to describe patterns in strings. They have a steep learning curve but are very powerful for working with text data. In this class we will just focus on the basics of regexps. A good tool for learning regexps is [regex101](https://regex101.com/), which lets you interactively edit and debug your regular expressions.
+
+>* Some people, when confronted with a problem, think "I know, I'll use regular expressions." Now they have two problems.
+
+>* — Jamie Zawinski (famous nerd)
+
+In these slides we will use the command `str_view` to understand how regular expressions work.
+
+## Simple regex
+
+The most basic regular expression is a plain string. It will match if the other string contains it as a substring.
+
+```{r}
+x = c("apple", "banana", "pear") |> print()
+str_view(x, pattern = "an")
+```
+
+Here `str_view` has matched our regexp ("`an`") inside of the second string `banana` of the vector x.
+
+Let us look onto `fruit` vector
+
+```{r}
+fruit |> print()
+```
+
+Let us find all the fruits that has `berry` in their name
+
+```{r}
+str_view(fruit, 'berry')
+```
+
+## Using Wildcards
+
+Our first non-trivial regular expression will use a wildcard: `.`. Used inside of a regular expression, the period matches any single character:
+
+```{r}
+str_view("else every eele etcetera", "e..e ")
+```
+
+If we want to "extract" the first match we can use str_extract() instead:
+
+```{r}
+str_extract("else every eele etcetera", "e..e ")
+```
+
+What about all the matches? You can guess the function here
+
+```{r}
+str_extract_all("else every eele etcetera", "e..e")
+```
+
+## Exercise
+
+What is the first string that matches the pattern `H.any three characters..y` in chapter 1 of Philosopher's Stone?
+
+```{r regex_1, exercise = TRUE}
+ch1
+```
+
+```{r regex_1-solution}
+str_extract(ch1, 'H...y')
+```
+
+## Character classes
+
+Instead of matching anything using `.`, we often want to match a class of characters: letters, numbers, spaces, etc. A "character class" is a special pattern that matches a collection of characters. There are four built-in character classes you should know:
+
+* `\w`: matches any alphanumeric character and is equivalent to using `[A-Za-z0-9_]`
+* `\s`: matches single space, tab, newline characters and is equivalent to using `[\t\n\r\f\v]`
+* `\d`: matches any digit and is equivalent to using `[0-9]`
+* `\b`: match a "word boundary" (more on this in a moment).
+
+`\w` matches any word character:
+
+```{r}
+str_view("this is a word", "\\w")
+```
+
+Note the additional level of escaping needed here
+
+
+
+If you have a missing backslash then..
+
+```{r missing-backslash, exercise = TRUE}
+str_view("this is a word", "\w")
+```
+
+
+**raw representation**
+
+```{r}
+str_view("this is a word", r"(\w)")
+```
+
+**`\d` matches any digit**
+
+```{r}
+str_view(c("number1", "two", "3hree"), "\\d")
+```
+
+**`\s` will match whitespace (spaces, tabs and newlines)**
+
+```{r}
+y = c("spa ce", "hello\tworld", "multi\nline")
+writeLines(y)
+str_view(y, "\\s")
+```
+
+## using `[]` expression
+
+You can also create your own character class using square brackets: `[abc]` will match one of a, b, or c. In other words, the 'width' of a character class is one character by default.
+
+```{r}
+str_view(fruit, '[be]a')  # Match either 'b' or 'e' followed by a
+```
+
+We can use character classes to match the first capital letter of a capitalized word:
+
+```{r}
+str_view(c("These", "are", "some Capitalized words"),
+         "[ABCDEFGHIJKLMNOPQRSTUVWXYZ]")
+```
+
+We do not need to go to all the trouble of typing each capital letter. We can use the shortcut `[A-Z]` instead.
+
+```{r}
+str_view(c("These", "are", "some Capitalized words"), "[a-e]")
+```
+
+## Word boundaries
+
+A final character class we'll use frequently is `\b`, which stands for "word boundary". A word boundary matches the "edges" of a word:
+
+```{r}
+str_view(c("Rafael Nadal", "Roger Federer", "Novak Djokovic"), "\\b")
+```
+Every word has a word boundary on either side, so we can use this in combination with other character classes to match certain kinds of words in text.
+
+## Exercise
+About how many words start with 'H' in ch1?
+
+```{r starts_with, exercise = TRUE}
+
+```
+
+```{r starts_with-solution}
+ch1 |> str_count('\\bH.')
+```
+
+
+In this exercise, we matched the pattern
+
+`<word boundary><character H><any character (.)>`
+
+## Quantifiers
+
+How many words are there in ch1? 
+We can use `\\w+` to find words. 
+
+```{r}
+str_count(ch1, "\\w+")
+```
+
+Now let us understand this expression in detail
+
+`\\w+ - <any number of word characters being together>`
+The four quantifiers you should know are:
+
+* `?`: match zero or one of the preceding character.
+* `+`: match one or more of the preceding character.
+* `*`: match zero or more of the preceding character.
+* `{x}`: match exactly x of the preceding character.
+* `{x,y}`: match between x and y of the preceding character.
+* `{x,}`: match at least x of the preceding character.
+
+So, to count the number of words using the pattern shown above:
+
+```{r}
+# get all words that are between 10 and 22 characters long
+str_extract_all(ch1, '\\w{10,22}\\b')
+```
+
+## Exercise
+
+
+How many words in ch1 match the pattern:
+
+`<word boundary><small case 'h'><any exactly 5 characters><word boundary>`
+
+
+
+```{r five-characters, exercise = TRUE}
+
+```
+
+```{r five-characters-solution}
+str_count(ch1, '\\bh\\w{5}\\b')
+```
+
+
+## Negations
+Earlier we looked at quotations. The first quotation in chapter 1 is:
+
+```{r}
+str_sub(ch1, 2150, 2163)
+```
+
+How can we find other quotes? The pattern for a quote is a quotation mark, followed by any number of things that are not a quotation mark, followed by another quotation mark:
+
+`<quotation mark><anything that is not a quotation mark><quotation mark>`
+
+To match this, we will use a negation. A negation is a character class that begins with the character "^". It matches anything that in not inside the character class:
+
+```{r}
+str_view("match doesn't match", "[^aeiou]+")
+```
+
+To match a quotation, we'll input the pattern that we specified above:
+
+
+```{r}
+str_view('"Here is a quotation", said the professor. "And here is another."', '"[^"]+"')
+```
+
+## Exercise
+
+Find all the character names in Harry Potter that are in the middle of a sentence. 
+
+
+Our pattern becomes:
+
+`<one or more space><Capital letter><at least five lowercase letters><not ending in a period>`
+
+```{r proper-names, exercise = TRUE}
+
+```
+
+
+```{r proper-names-solution}
+str_extract_all(ch1, '\\s+[A-Z][a-z]{5,}[^.]') |> table()
+```
+
+
+## Grouping
+
+"Professor" is one of the most common capitalized words in this book. Is there a character named Professor, or is it just a title? Now let us try to match one or more capitalized words in a row. We can accomplish this by creating a group, and then applying a quantifier to it.
+
+To create a group, I surround a part of my regexp with parentheses:
+
+```{r}
+str_view("this will be grouped", "([a-z]+ ?)+")
+```
+
+The parentheses do not change the regular expression (but they are doing something else, which we will discuss shortly.) But now I can apply a quantifier to the whole group:
+
+
+So now we take the previous pattern and group it:
+
+`(<word boundary><Capital letter><at least five lowercase letters><word boundary>){match 1+ times}`
+
+```{r}
+str_extract_all(ch1, '([A-Z][a-z]{5,} ?)+') |> table()
+```
+
+Let us check on of them
+
+```{r}
+str_locate(ch1, 'Bonfire')
+
+str_sub(ch1, 8957, 8957 + 20)
+```
+
+## Backreferences
+Parentheses define groups that can be referred to later in the match as `\1, \2` etc. This is called a backreference. 
+
+For example:
+
+`(.)\1`
+
+will match the same character repeated twice in a row:
+
+```{r}
+"eyxyel"  |> str_view("(.)x\\1")
+```
+
+## Anchors
+
+Sometimes we want a match to occur at a particular position in the string. For example, "all words which start with b". For this we have the special anchor characters: `^` and `$`. The caret `^` matches the beginning of a string. The `$` matches the end.
+
+```{r}
+x <- c('apple', 'banana', 'pear')
+str_view(x, '^b')
+str_view(x, 'r$')
+```
+
+## `str_match` function
+
+`str_match(v, re)` will create a matrix out of the grouped matches in re. The first column has the whole match, and additional columns are added for each character group. If the pattern does not match, you will get NAs.
+
+```{r}
+head(str_match(words, '(.).*(.)$'))
+```
+
+## `str_replace` function
+`str_replace(v, re, rep)` will replace each match of `re` in `v` with `rep`. The most basic usage is as a sort of find and replace:
+
+```{r}
+str_replace('Give me liberty or give me death', '\\w+$', 'pizza')
+```
+
+
+
+
+
+
