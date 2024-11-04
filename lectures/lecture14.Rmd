@@ -471,7 +471,7 @@ parse_datetime("22/10/1, 10:01:00",
 These functions can make dates from individual (numerical) components:
 
 ```{r}
-make_datetime(2024, 3, 5, 10, 00, 59, tz = "EDT")
+make_datetime(2024, 3, 5, 10, 00, 59, tz = "EST")
 make_date(2024, 01, 10)
 ```
 

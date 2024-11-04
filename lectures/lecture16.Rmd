@@ -1,0 +1,521 @@
+---
+subtitle: "DATASCI 306: Lecture 16"
+title: "Iterations"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(nycflights13)
+```
+
+## Today's Topic
+
+
+After today's lecture you will understand:
+
+* Conditional statements: if/else
+* Iteration: for/while loops.
+* Map family functions
+
+This corresponds to Chapter 26/27 of your book
+
+## Conditional execution
+Often when writing functions we need to do different things depending on what data is passed in. This is known as conditional execution, and is accomplished using the if and/or else construct:
+
+<pre>
+if (condition) {
+  # code executed when condition is TRUE
+} else {
+  # code executed when condition is FALSE
+}
+</pre>
+
+## if statements
+The workhorse for conditional execution in R is the `if` statement.
+
+```{r}
+if (T) {  # this condition is hard-coded to TRUE and will always execute the if-block
+  print('do something if true')
+}
+```
+
+```{r}
+x = 1
+if(x > 2){
+  print(x)
+}
+print('hello')
+```
+
+## Optional else block
+Use an else to control the flow without separately checking the condition’s negation:
+
+```{r}
+if ((2 + 3) == 5 ) {
+  print('the statement is true')
+} else {
+  print('the statement is false')
+}
+  
+```
+
+## if-else chain
+
+For more complex cases, you may want to check multiple conditions:
+
+```{r}
+a = -1
+b = 1
+
+if (a * b > 0) {
+  print('Zero is not between a and b')
+} else if ( a < b ) {
+    smaller = a
+    larger = b
+} else {
+    smaller = b
+    larger  = a
+}
+
+c(smaller, larger)
+```
+
+## Function with multiple return example
+
+This function returns 'fizz' if the given number is a multiple of 3. 'buzz' if it is a multiple of 5. If neither a multiple of 3 or 5, it simply returns the given number
+
+```{r}
+fizzbuzz <- function(x){
+    if(x %% 3 == 0) {
+      return ('fizz')
+    } else if(x %% 5 == 0){
+      return ('buzz')
+    }
+    return (x)
+}
+
+fizzbuzz(7)
+```
+
+## Iteration
+Sometimes, you want to repeat a set of statements again and again... until a conditional is met. That is when you use a `for` loop
+
+<pre>
+{r}
+for (<index> in <vector>) {
+    [do something for each value of <index>]
+}
+</pre>
+
+```{r}
+x = sample(1:100, 10, replace = F)
+print(x)
+for (item in x){
+  print(item)
+}
+```
+
+## Exercise
+
+Print the values that are even numbers in this vector using a `for` loop (not vector operation)
+```{r loop-1, exercise = TRUE}
+x = sample(1:100, 10, replace = F)
+
+```
+
+```{r loop-1-solution}
+x = sample(1:100, 10, replace = F)
+x
+for(item in x){
+  if(item %% 2 == 0){
+    print(item)
+  }
+}
+```
+
+## `while` loop
+The last kind of loop we will consider is `while()`.
+
+A while statement can be useful when you aren’t sure how many iterations are needed. This happens sometimes in statistics or data science when you are simulating a random quantity.
+
+Here is an example that takes a random walk and terminates if the value is more than 10 units from 0.
+
+**Example: random walk**
+A random walk is a mathematical concept that describes a path constructed by a series of random steps. The concept of random walk has numerous applications in computer science, offering a powerful tool for modeling complex systems, designing algorithms, and analyzing data.
+
+```{r}
+maxIter = 1000 # always limit the total iterations allowed
+val = c()
+val[1] = rnorm(1) ## initialize
+val[1]
+
+k = 1
+while (abs(val[k]) < 10 && k <= maxIter) {
+  val[k + 1] = val[k] + rnorm(1)
+  k = k + 1
+}
+val = val[1:k]
+
+plot(val, type = 'l')
+```
+
+## loop keywords
+
+The following key words are useful within loops:
+
+* break - break out of the currently executing loop
+* next - move to the next iteration immediately, without executing the rest of this iteration (continue in other languages such as C++)
+
+Here is an example using next:
+```{r}
+
+for (i in 1:10 ) {
+  if (i %% 2 == 0) next
+  cat(i,'\n')
+}
+```
+
+`break` example
+
+```{r}
+maxIter = 1000 # always limit the total iterations allowed
+val = c()
+val[1] = rnorm(1) ## initialize
+
+k = 1
+while (k <= maxIter) {
+  val[k + 1] = val[k] + rnorm(1)
+  k = k + 1
+  if(abs(val[k]) > 10)
+      break
+}
+val = val[1:k]
+
+plot(val, type = 'l')
+     
+```
+
+## Dataframe functions
+A case of a problem of indirection, as `dplyr` uses `tidy evaluation` to allow you to refer to the names of variables inside your data frame without any special treatment.
+
+```{r embrace, exercise = TRUE}
+
+grouped_mean <- function(df, group_var, mean_var) {
+  df |>
+    group_by(group_var) |>
+    summarize(mean(mean_var))
+}
+
+grouped_mean(mpg, model, hwy)
+```
+
+Fix with embracing `{{ }}`
+
+
+
+
+## `map` functions
+
+An alternative to writing a `for loop` is to use the map(f, seq) function. This takes a function f and "maps" it over each element of a sequence (list or vector) seq.
+
+![](images/map.png){#id .class width=70%}
+
+## Compound Random Variables
+
+Many times we take sample sizes $n$ to be fixed. But what if our sample size itself was random? 
+
+A **compound random variable** is one in which a discrete random variable sets the sample size, and then some other random variable is replicated that many times.
+
+```{r}
+r_pois_norm <- function(n, mu = 0 , sd = 1) {
+  replicate(n, {
+    # generate a random integer between 8 and 10
+    n_i <- sample(8:10, 1)
+    rnorm(n_i, mu, sd)
+  })
+}
+
+samples <- r_pois_norm(3)
+samples
+```
+
+
+## Maximum of the samples
+
+What was the largest value of each sample?
+
+```{r}
+map(samples, max)
+```
+
+What was the largest magnitude?
+```{r}
+## version 1
+map(samples, ~ max(abs(.x)))
+```
+Recall: `~ ... operations on .x ...` is equivalent to 
+```{r eval = F}
+function(.x) { ... .x ...}
+```
+
+```{r}
+get_max <- function(x){
+  max(abs(x))
+}
+
+map(samples, get_max)
+
+```
+
+```{r}
+## version 2
+map(samples, abs) |> map(max)
+```
+
+## Exercise
+
+Use `map` to square (raise to the power of 2) each number in the list.
+
+```{r mapclass, exercise = TRUE}
+v = c(2, 4, 5, 7)
+
+```
+
+```{r mapclass-solution}
+map(v, ~ .x^2)
+
+#OR
+
+pow_2 <- function(x){
+  x ^ 2
+}
+
+map(v, pow_2)
+```
+
+## Exercise
+
+Use `map` that takes `flights` dataframe and:
+
+* Return a short summary in the form of the mean, median, and standard deviation if it is `numeric`.
+* Return the class of the object otherwise
+
+
+```{r mapsummary, exercise = TRUE}
+
+```
+
+```{r mapsummary-solution}
+map(flights, ~ summary(.x))
+```
+
+## Getting vector outputs
+
+`map` can take either a list or a `vector` as input, but always returns a `list` as output. If you know that all outputs will be the same, you can `unlist` to get the values in the form you want:
+
+```{r}
+map(samples, ~ max(abs(.x))) |> unlist()
+```
+
+## Known types
+
+If you know that all of the entries in the list will be of a particular type, you can `flatten_*` them to that type:
+
+- `dbl`: Numeric data, decimal (can handle integers too)
+- `int`: Numeric data, integers
+- `lgl`: Logical/boolean
+- `chr`: Character/strings 
+
+```{r}
+map(samples, ~ max(abs(.x))) |> flatten_dbl()
+```
+
+You get an error if things don't match:
+```{r, eval = FALSE}
+flatten_dbl(list(c("hello")))
+# Error: Can't coerce element 1 from a character to a double
+```
+
+## `map_*` versions
+
+The pattern `map(input, f) |> flatten_*()` is so common, there are parallel versions for map:
+
+```{r}
+map_dbl(samples, ~ max(abs(.x)))
+```
+
+
+
+## Additional arguments
+
+We have seen several times that R functions take `...` and can use that to pass additional arguments along  to other functions.
+
+```{r}
+samples_missing <- samples
+samples_missing[[1]][1] <- NA
+
+map_dbl(samples_missing, mean)
+map_dbl(samples_missing, mean, na.rm = TRUE)
+```
+
+## Mapping on two things
+
+Suppose for each sample, we have another outcome:
+
+```{r}
+samples_y <- map(samples, ~ runif(length(.x)))
+samples_y
+```
+
+What is the correlation within each sample?
+
+```{r}
+map2(samples, samples_y, cor)
+map2_dbl(samples, samples_y, cor)
+```
+
+
+## Mapping your own function on two things
+
+Suppose we wanted the average ratio of X to Y within each sample. We need to write a custom function with two arguments:
+
+```{r}
+map2_dbl(samples, samples_y, function(x, y) { mean(x / y)})
+map2_dbl(samples, samples_y, ~ mean(.x / .y))
+```
+
+## Exercise
+
+Using `map2`, get the first word of each item in `stringr::fruit` (keep single words). 
+
+Some useful examples:
+```{r}
+str_locate("chili pepper", " ")
+str_sub("chili pepper", end = 6 - 1)
+str_locate("canataloupe", " ")
+```
+
+
+```{r firstword, exercise = TRUE}
+first_space <- str_locate(stringr::fruit, " ")[,1]
+```
+
+```{r firstword-solution}
+first_space <- str_locate(stringr::fruit, " ")[,1]
+get_word = function(x, y){
+  if(is.na(y)){
+      return(x)
+  }
+  return(str_sub(x, 1, y-1))
+}
+map2(fruit, first_space, get_word) |> flatten_chr()
+
+fruit
+```
+
+
+
+## Other loop replacing functions
+
+`keep` takes only the entries that match a predicate:
+
+```{r}
+keep(samples, ~ length(.x) > 10)
+```
+
+`discard` drops entries that match.
+
+Many `for` loops have **accumulators**:
+
+```{r}
+max_length <- -Inf
+for (i in seq_along(samples)) {
+  max_length <- max(length(samples[[i]]), max_length)
+}
+max_length
+```
+
+`reduce` avoids the bookkeeping (often convenient to map first):
+```{r}
+map_dbl(samples, length) |> reduce(max)
+```
+
+
+```{r}
+reduce(c(1, 10, 100, 2, 3, 4), `+`)
+```
+
+We can see the intermediate results with `accumulate`:
+
+```{r}
+accumulate(c(1, 10, 100, 2, 3, 4), `+`)
+```
+
+## Map functions that return tables
+
+The `_dfr` variants use functions that return data frames, and then row bind them together
+```{r}
+map_dfr(samples, ~ tibble(x = .x))
+```
+We probably want to know which sample each value is so we can do operations after. We can use an **indexed map** with the `imap_*` variants:
+```{r}
+imap_dfr(samples, ~ tibble(x = .x, sample_num = .y)) |> 
+  group_by(sample_num) |> 
+  mutate(x_centered = x - mean(x)) # within group, mean centered values
+```
+
+There is also `_dfc` that binds columns together.
+
+
+
+
+## Built in R functions
+
+There are several built in functions that are similar to `map_*`:
+
+* `lapply` is similar to `map`, but doesn't allow for the function shorthand notation
+* `sapply` is similar to the `map_*` varieties, but no checking. Will return a list if it can't safely unlist results.
+* `vapply` is even closer to `map_*`, but still no anonymous functions
+* `mapply` is similar to `map2`
+
+R also has some capitalized versions (`Map`, `Reduce`), but generally no checking less convenient to use with pipes.
+
+## Errors in iteration
+
+If we run into a bug in the code being iterated, it can often be difficult to find the source.
+
+```{r}
+x <- list(1, 10, "3", 7)
+```
+
+```{r eval = FALSE}
+x <- list(1, 10, "3", 7)
+map(x, log)
+# Error in .Primitive("log")(x, base) : 
+#  non-numeric argument to mathematical function
+```
+
+The `safely` function catches these errors and gives back useful info:
+
+```{r}
+safe_log <- safely(log) # returns a new function
+safe_log(10)
+safe_log("3")
+map(x, safe_log)
+```
+
+
+
+
+
+
+
+
+
+

@@ -322,7 +322,7 @@ The parentheses do not change the regular expression (but they are doing somethi
 
 So now we take the previous pattern and group it:
 
-`(<word boundary><Capital letter><at least five lowercase letters><word boundary>){match 1+ times}`
+`(<Capital letter><at least five lowercase letters><space>){match 1+ times}`
 
 ```{r}
 str_extract_all(ch1, '([A-Z][a-z]{5,} ?)+') |> table()
@@ -335,6 +335,8 @@ str_locate(ch1, 'Bonfire')
 
 str_sub(ch1, 8957, 8957 + 20)
 ```
+
+Why is the `Night` showing up in the output above?
 
 ## Backreferences
 Parentheses define groups that can be referred to later in the match as `\1, \2` etc. This is called a backreference. 
