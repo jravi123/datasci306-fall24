@@ -1,0 +1,419 @@
+---
+subtitle: "DATASCI 306: Lecture 17"
+title: "Factors"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(nycflights13)
+```
+
+## Strings and Factors
+
+R has two data types for representing categorical data types:
+
+* Strings: character data
+* Factors: integers representing categories with look up table for labels, can be ordered 
+
+```{r}
+example_str <- c("you", "say", "goodbye", "i", "say", "hello", "hello", "hello")
+example_str
+example_fct <- factor(example_str)
+example_fct
+```
+
+
+
+Factors are used for:
+
+* categorical variables (variables that have a fixed and known set of possible values)
+* also useful when you want to display character vectors in a non-alphabetical order.
+
+In R we typically represent categorical variables using factors.
+
+## Strings vs. factors
+
+Many times two types have the same function, why use one or the other?
+
+- Want to order lexicographically: strings
+- Want to order in other way: factors
+- Treat as text (search, combine): strings
+- Avoid errors from treating as text: factors
+
+There used to be a space saving advantage to factors but that has been eliminated with newer versions of R.
+
+## `forcats` package
+
+`tidyverse` contains a package that has some tools for working with factors. Sometimes it is not automatically loaded by the tidyverse metapackage, in which case you must load it manually:
+
+`library(forcats)`
+
+`forcats` commands are prefixed by fct_ (compare stringr).
+
+
+## Why factors?
+To learn the basics, we'll start with a simple example
+
+```{r}
+birth_months = c("Jan", "Feb", "Sep", "Sep", "Dec", "Jan", "Jul", "Aug")  # categorical variable
+```
+
+The `possible` values of a categorical variable are called the `levels`. The levels of birth_months are `Jan, Feb, ..., Dec`. The actual values of birth_months are just called the `values`.
+
+To create a factor, we must specify the levels and the values:
+
+```{r}
+month.abb
+```
+
+```{r}
+birth_months_fac = factor(birth_months, levels=month.abb) |> print()
+```
+
+## Significance of levels
+
+If you don't specify the levels, R will infer them based on all the observed values of the variable:
+
+```{r}
+factor(birth_months) |> str()
+```
+
+It's best to be explicit about the factor levels. This way, if you there are typos or data entry errors, you will catch them more easily
+
+```{r}
+bad = c("Jan", "Feb", "Sep", "Ser", "Dec", "Jan", "Jul", "Aug")
+#                               ^ note typo
+# factor(bad)
+factor(bad, levels=month.abb)
+```
+
+
+## Order
+
+One advantage of factors is that they can be ordered. This enables them to sort and plot in the way you would expect. 
+
+Compare:
+```{r}
+sort(birth_months)
+```
+
+```{r}
+sort(birth_months_fac)
+```
+
+If you specify the factor levels using the levels= option, then that will specify the default order. If you do not specify the levels, then they will be sorted alphabetically by default.
+
+## levels function
+You can just get the levels of a factor using the levels function
+
+```{r}
+levels(birth_months_fac)
+```
+
+```{r}
+levels(factor(birth_months))
+```
+
+## General Social Survey - gss dataset
+This is a sample of data from the [General Social Survey](https://gss.norc.org/), a long-running US survey conducted by the independent research organization NORC at the University of Chicago. This is available with tidyverse package.
+
+We will use an augmented version of the gss data provided by the package
+```{r}
+gss18 <- read_csv('data/gss18.csv')
+gss18 |> glimpse()
+```
+
+We will use this data to illustrate some common challenges you’ll encounter when working with factors.
+
+When factors are stored in a tibble, you can’t see their levels so easily. One way to view them is with count():
+
+```{r}
+gss18 |> count(race)
+```
+
+## Working with factors
+The two main aspects when working with factors:
+
+* changing the order of the levels
+* changing the values of the levels
+
+We will look at how to do this with examples
+
+## Modifying factor order
+If you want to explore the average number of hours spent watching TV per day across religions, we would run a query like:
+
+```{r}
+relig_summary <- gss18 |>
+  filter(!is.na(relig)) |>
+  group_by(relig) |>
+  summarize(
+    tvhours = mean(tvhours, na.rm = TRUE),
+    n = n()
+  )
+
+ggplot(relig_summary, aes(x = tvhours, y = relig)) + 
+  geom_point()
+```
+
+It is hard to read this plot because there’s no overall pattern. We can use `fct_reorder` to improve this.  It takes 3 arguments:
+
+* .f, the factor whose levels you want to modify.
+* .x, a numeric vector that you want to use to reorder the levels.
+* Optionally, .fun, a function that’s used if there are multiple values of .x for each value of .f. The default value is median.
+
+```{r}
+ggplot(relig_summary, aes(x = tvhours, y = fct_reorder(relig, tvhours))) +
+  geom_point()
+```
+
+Cleaner way of writing this would be:
+
+```{r}
+relig_summary |>
+  mutate(
+    relig = fct_reorder(relig, tvhours)
+  ) |>
+  ggplot(aes(x = tvhours, y = relig)) +
+  geom_point()
+```
+
+
+
+## Exercise
+Fix the below chart to make it more easily readable by showing the bars arranged from highest to lowest count, making the chart easier to interpret.
+
+
+```{r bar-reorder, exercise = TRUE}
+gss18 <- read_csv('data/gss18.csv')
+gss18 |> count(income) |> ggplot(aes(y = income, x = n)) + geom_col()
+```
+
+```{r bar-reorder-solution}
+gss18 |> count(income) |> ggplot(aes(y = fct_reorder(income, n), x = n)) + geom_col()
+```
+
+
+## Reordering on 2 variables
+
+Another type of reordering is useful when you are coloring the lines on a plot. `fct_reorder2(.f, .x, .y)` reorders the factor `.f` by the `.y` values associated with the largest `.x` values. This makes the plot easier to read because the colors of the line at the far right of the plot will line up with the legend.
+
+```{r}
+by_age <- gss_cat |>
+  filter(!is.na(age)) |> 
+  count(age, marital) |>
+  group_by(age) |>
+  mutate(
+    prop = n / sum(n)
+  )
+
+ggplot(by_age, aes(x = age, y = prop, color = marital)) +
+  geom_line(linewidth = 1) + 
+  scale_color_brewer(palette = "Set1")
+
+ggplot(by_age, aes(x = age, y = prop, color = fct_reorder2(marital, age, prop))) +
+  geom_line(linewidth = 1) +
+  scale_color_brewer(palette = "Set1") + 
+  labs(color = "marital") 
+```
+
+## `fct_infreq` and `fct_rev`
+
+Use fct_infreq() to order levels in decreasing frequency.  To understand this concept we will use the `gss_cat` data that is provided by `tidyverse`
+
+
+```{r}
+gss_cat |>
+  mutate(marital = marital |> fct_infreq())  |>
+  ggplot(aes(y = marital)) +
+  geom_bar()
+```
+
+Combine it with fct_rev() if you want them in increasing frequency so that in the bar plot largest values are on the right, not the left.
+
+```{r}
+gss_cat |>
+  mutate(marital = marital |> fct_infreq() |> fct_rev())  |>
+  ggplot(aes(y = marital)) +
+  geom_bar()
+```
+
+
+##  `fct_collapse`
+
+If you want to collapse a lot of levels, fct_collapse() is a useful variant of fct_recode(). For each new variable, you can provide a vector of old levels
+
+```{r}
+gss18 |>
+  mutate(
+    partyid = fct_collapse(partyid,
+      "rep" = c("strong republican", "not str republican"),
+      "ind" = c("ind,near rep", "independent", "ind,near dem"),
+      "dem" = c("not str democrat", "strong democrat")
+    )
+  ) |>
+  count(partyid)
+```
+
+## Lumping small groups
+
+Sometimes you just want to lump together the small groups. `fct_lump_*()` family of functions can help. 
+
+`fct_lump_lowfreq()`that progressively lumps the smallest groups categories into “Other”, always keeping “Other” as the smallest category.
+
+```{r}
+gss18 |>
+  mutate(relig = fct_lump_lowfreq(relig)) |>
+  count(relig)
+```
+
+However this reduced to only 4 categories.  Instead, we can use the fct_lump_n() to specify that we want exactly `n` groups:
+
+```{r}
+gss18 |>
+  mutate(relig = fct_lump_n(relig, n = 10)) |>
+  count(relig, sort = TRUE)
+```
+
+## More analysis
+Let us analyse attitudes about religion
+
+```{r}
+
+# distribution of religion
+gss18 |> ggplot(aes(x = relig, fill = relig)) +
+  geom_bar()
+```
+
+How to improve this overlapping, cramped plot? Easy fix is to switch the axis
+
+```{r}
+gss18 |> ggplot(aes(y = relig, fill = relig)) +
+  geom_bar()
+```
+Let us check the levels
+
+```{r}
+levels(gss18$relig)
+```
+
+Let us use `fct_infreq` to reorder the levels such in increasing order of frequency:
+
+```{r}
+gss18 |> ggplot(aes(y = fct_infreq(relig), fill = relig)) +
+  geom_bar()
+```
+
+We may also want to simplify the plot by grouping some factors together. The fct_lump command will combine uncommon factor levels into a new level, "other":
+
+```{r}
+gss18 |> ggplot(aes(x = fct_lump(relig), fill = fct_lump(relig))) +
+  geom_bar()
+```
+
+Be careful with this. Not everybody enjoys being lumped into the "Other" category. A good compromise in this case could be to use one bar for "Other", but still break everyone out in the legend:
+
+```{r}
+# lumped levels, but still showing the variation
+gss18 |> ggplot(aes(x = fct_lump(relig), fill = relig)) +
+  geom_bar()
+```
+
+## gss - generations
+Here is the age distribution of 2014 surveyers
+
+```{r}
+gss18 |> ggplot() + geom_histogram(aes(x = age))
+```
+
+The oldest person was born in which year?
+
+```{r oldest-person, exercise=TRUE}
+
+```
+
+```{r oldest-person-solution}
+gss18 |> slice_max(age, n = 1) |> head(1) -> oldest_person
+2018 - oldest_person$age
+```
+
+Let's define the following generations:
+
+[Silent generation](https://en.wikipedia.org/wiki/Silent_Generation): 1929—1945
+[Baby boomers](https://en.wikipedia.org/wiki/Baby_boomers): 1946—1964
+[Gen X](https://en.wikipedia.org/wiki/Generation_X): 1964—1981
+[Gen Y/Millennial](https://en.wikipedia.org/wiki/Millennials): 1982—1996
+[Gen Z](https://en.wikipedia.org/wiki/Generation_Z): 1997—20teens
+
+```{r}
+gss18_gen <- mutate(gss18, birth_year = 2018 - age, 
+                    generation = cut(birth_year, 
+                                     breaks = c(1929, 1946, 1964, 1982, 1997, 2014), 
+                                     labels=c('silent', 'boomer', 'x', 'millennial', 'z')))
+```
+
+```{r}
+ggplot(gss18_gen) + geom_bar(aes(x = generation, fill = generation))
+```
+
+## Religious affiliation by generation
+Here is the overall distribution of religious affiliation in the data:
+
+```{r}
+gss18_gen <- gss18_gen |> mutate(fct_lump_relig = fct_lump(relig))
+gss18_gen |> select(generation, fct_lump_relig) |> table()
+```
+
+We probably want to normalize this table so that the data are expressed as percentages, with the rows summing to one:
+
+```{r}
+gss18_gen |> select(generation, fct_lump_relig) |> table() |> prop.table()
+```
+
+Note that by normalizing the rows or columns, we are now studying the conditional distribution of religion given generational status (or vice versa)
+
+```{r}
+# normalize the row
+
+gss18_gen |> select(generation, fct_lump_relig) |> table() |> prop.table(1)
+```
+
+Next we will do conditional distribution of generation; given a religion
+
+```{r}
+gss18_gen |> select(generation, fct_lump_relig) |> table() |> prop.table(2)
+```
+
+## chi-squared test
+
+Next, let's test whether religious affiliation and generational status are statistically independent. To do this, we'll perform a chi-squared test of independence, using `chisq.test()`:
+
+```{r}
+gss18_gen |> select(generation, fct_lump_relig) |> table() |> chisq.test()
+```
+
+## Hours of TV watched
+
+```{r}
+gss18_gen |> ggplot(aes(x = generation, y = tvhours)) + geom_boxplot()
+```
+This plot could maybe be improved by ordering the boxes so that the medians are in ascending order:
+
+```{r}
+gss18_gen |> ggplot(aes(x=fct_reorder(generation, tvhours), y=tvhours)) + geom_boxplot()
+```
+
+## Political orientation
+```{r}
+select(gss18_gen, generation, partyid) |> table() |> prop.table(1)
+```
+
+
+
+
+
