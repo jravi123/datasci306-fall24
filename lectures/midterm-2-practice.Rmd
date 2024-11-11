@@ -64,7 +64,10 @@ Write an expression to find what week day name (e.g, Mon, Tue etc.) it is on Nov
 
 ```
 
-
+```{r md-2-2-solution}
+future_date <- mdy('11/11/2025')
+wday(future_date, label = T)
+```
 
 ## Q3 
 
@@ -102,7 +105,7 @@ flights |> group_by(origin, dest) |> summarize(n = n())
 ```
 
 ```{r md-2-4-solution}
-q('select origin, dest, count(*) as n from flights group by origin, dest')
+q('SELECT origin, dest, count(*) as n FROM flights GROUP BY origin, dest')
 ```
 
 
@@ -162,7 +165,7 @@ storms |> count(month) |> filter(n > 1000)
 
 ```{r md-2-7-solution}
 
-q('select month, count(*) as n from storms group by month having count(*) > 1000')
+q('SELECT month, count(*) as n FROM storms GROUP BY month HAVING n > 1000')
 ```
 
 
@@ -184,7 +187,7 @@ mpg |> filter(manufacturer == 'audi') |> group_by(model) |> summarize(mean_hwy =
 
 
 ```{r md-2-8-solution}
-q('select model, avg(hwy) as mean_hwy from mpg where manufacturer = "audi" group by model order by mean_hwy' )
+q('SELECT model, avg(hwy) as mean_hwy FROM mpg WHERE manufacturer = "audi" GROUP BY model ORDER BY mean_hwy' )
 
 ```
 
@@ -207,7 +210,7 @@ flights |> left_join(airports, join_by(dest == faa)) |> filter(name == 'La Guard
 
 ```{r md-2-9-solution}
 
-q("select * from flights join airports on flights.dest = airports.faa where name = 'La Guardia'" )
+q("SELECT * FROM flights LEFT JOIN airports ON flights.dest = airports.faa WHERE name = 'La Guardia'" )
 ```
 
 
