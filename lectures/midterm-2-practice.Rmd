@@ -1,0 +1,237 @@
+---
+title: "Midterm-2 practice/review"
+output:
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tidyverse)
+library(lubridate) # install.packages("lubridate") if you don't have this
+library(nycflights13) # install.packages("Lahman") if you don't have this
+library(remotes)
+library(harrypotter)
+library(DBI)
+library(dbplyr)
+ch1 <- philosophers_stone[[1]]
+
+df = tibble(visit = c("2024-03-01 10:30:00", "2024-03-01 14:45:00", "2024-03-01 17:20:00", "2024-03-02 09:00:00", "2024-03-02 10:15:00", "2024-03-02 14:30:00",
+"2024-03-02 22:00:00", "2024-03-03 11:00:00", "2024-03-03 16:45:00",
+"2024-03-08 10:00:00", "2024-03-08 15:30:00", "2024-03-09 11:30:00",
+"2024-03-09 18:00:00", "2024-03-10 09:45:00", "2024-03-10 12:15:00"))
+
+
+# Create an ephemeral in-memory RSQLite database
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+
+dbWriteTable(con, "mpg", mpg, overwrite = T)
+dbWriteTable(con, "flights", flights, overwrite = T)
+dbWriteTable(con, "airports", airports, overwrite = T)
+dbWriteTable(con, 'storms', storms, overwrite = T)
+q <- function(...) dbGetQuery(con, ...)
+
+```
+
+
+
+## Q1
+
+Which of the following regular expressions matches a sequence of one or more digits?
+Group of answer choices
+
+*     \\d*
+*     \\d+
+*     [0-9]*
+*     [0-9]+
+
+```{r md-2-1, exercise = TRUE}
+
+
+```
+
+
+## Q2
+
+Write an expression to find what week day name (e.g, Mon, Tue etc.) it is on November 11th, 2025
+
+
+```{r md-2-2, exercise = TRUE}
+
+
+```
+
+
+
+## Q3 
+
+I'm attempting to retrieve all the names prefixed with "Mr." or "Mrs." in chapter 1 of the book "Harry Potter and the Philosopher's Stone". Assume ‘ch1’ variable has the content of the first chapter.
+ Here is the expression I wrote
+
+```{r md-2-3, exercise = TRUE}
+ch1 <- philosophers_stone[[1]]
+str_extract_all(ch1, "(Mr.|Mrs.)\\s[A-Z]+")
+
+```
+
+```{r md-2-3-solution}
+str_extract_all(ch1, "(Mr.|Mrs.)\\s[A-Z]\\w+")
+```
+
+However, as you can see only the first character of the full name is displayed. I want to extract the entire name that comes next to Mr. or Mrs. like below:
+
+
+
+Please rewrite the regex to get the correct result and explain why it  does not work as given
+
+
+## Q4 
+
+Write an SQL statement that has the same result as the dplyr statement given below
+
+flights |> group_by(origin, dest) |> summarize(n = n())
+
+
+
+```{r md-2-4, exercise = TRUE}
+
+
+```
+
+```{r md-2-4-solution}
+q('select origin, dest, count(*) as n from flights group by origin, dest')
+```
+
+
+
+## Q5 
+Here is the ‘fruit’ vector we studied in lectures
+
+
+
+I want to retrieve all fruits that are of exactly 6 characters long. Which expression should I use?
+
+
+*  fruit[fruit.legnth() == 6]
+*  fruit[str_length(fruit) == 6]
+*  fruit[length(fruit) == 6]
+
+
+```{r md-2-5, exercise = TRUE}
+
+
+```
+
+## Q6
+Using the same ‘fruit’  vector given above, I want to retrieve all the names that are made up of two words (i.e., with one space in the name); like for e.g., blood orange, chili pepper. Write a regular expression to get only those words.  You may use ‘str_extract’ function to get your results
+
+
+```{r md-2-6, exercise = TRUE}
+
+
+```
+
+
+```{r md-2-6-solution}
+
+fruit[str_detect(fruit, "\\w*\\s\\w*")] # neater way
+
+# can also accept
+
+str_extract(fruit, "\\w*\\s\\w*")
+
+```
+
+
+## Q7
+Write a SQL query that gets the same result as the code snipped given below
+
+```{r}
+storms |> count(month) |> filter(n > 1000)
+
+```
+
+
+```{r md-2-7, exercise = TRUE}
+
+
+```
+
+```{r md-2-7-solution}
+
+q('select month, count(*) as n from storms group by month having count(*) > 1000')
+```
+
+
+
+## Q8
+Write a SQL query that gets the same result as the code snippet given below
+
+```{r}
+
+mpg |> filter(manufacturer == 'audi') |> group_by(model) |> summarize(mean_hwy = mean(hwy)) |> arrange(mean_hwy)
+
+```
+
+
+```{r md-2-8, exercise = TRUE}
+
+
+```
+
+
+```{r md-2-8-solution}
+q('select model, avg(hwy) as mean_hwy from mpg where manufacturer = "audi" group by model order by mean_hwy' )
+
+```
+
+
+
+## Q9
+Write a SQL equivalent of this dplyr query
+
+```{r}
+flights |> left_join(airports, join_by(dest == faa)) |> filter(name == 'La Guardia')
+```
+
+
+
+```{r md-2-9, exercise = TRUE}
+
+
+```
+
+
+```{r md-2-9-solution}
+
+q("select * from flights join airports on flights.dest = airports.faa where name = 'La Guardia'" )
+```
+
+
+## Q10
+
+Analyze the provided website visitor timestamp data (stored in the df tibble) using dplyr to determine the hour of the day with the highest website traffic. The goal is to identify the busiest hour. Note: the given timestamp is a chr datatype
+
+
+```{r}
+df
+```
+
+
+```{r md-2-10, exercise = TRUE}
+
+
+```
+
+```{r md-2-10-solution}
+df |> mutate(visit = ymd_hms(visit), hour = hour(visit)) |> count(hour) |> slice_max(n)
+```
+
+
+
+
+
+
