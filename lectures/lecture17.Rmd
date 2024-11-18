@@ -131,7 +131,7 @@ gss18 |> glimpse()
 
 We will use this data to illustrate some common challenges you’ll encounter when working with factors.
 
-When factors are stored in a tibble, you can’t see their levels so easily. One way to view them is with count():
+You can't see the unique categorical values easily in a tibble. One way to view them is with count():
 
 ```{r}
 gss18 |> count(race)
@@ -153,8 +153,7 @@ relig_summary <- gss18 |>
   filter(!is.na(relig)) |>
   group_by(relig) |>
   summarize(
-    tvhours = mean(tvhours, na.rm = TRUE),
-    n = n()
+    tvhours = mean(tvhours, na.rm = TRUE)
   )
 
 ggplot(relig_summary, aes(x = tvhours, y = relig)) + 
@@ -165,7 +164,7 @@ It is hard to read this plot because there’s no overall pattern. We can use `f
 
 * .f, the factor whose levels you want to modify.
 * .x, a numeric vector that you want to use to reorder the levels.
-* Optionally, .fun, a function that’s used if there are multiple values of .x for each value of .f. The default value is median.
+
 
 ```{r}
 ggplot(relig_summary, aes(x = tvhours, y = fct_reorder(relig, tvhours))) +
@@ -229,7 +228,7 @@ Use fct_infreq() to order levels in decreasing frequency.  To understand this co
 
 ```{r}
 gss_cat |>
-  mutate(marital = marital |> fct_infreq())  |>
+  mutate(marital = fct_infreq(marital))  |>
   ggplot(aes(y = marital)) +
   geom_bar()
 ```
@@ -238,11 +237,19 @@ Combine it with fct_rev() if you want them in increasing frequency so that in th
 
 ```{r}
 gss_cat |>
-  mutate(marital = marital |> fct_infreq() |> fct_rev())  |>
+  mutate(marital = fct_rev(fct_infreq(marital))) |>
   ggplot(aes(y = marital)) +
   geom_bar()
 ```
 
+## fct_recode
+
+Change factor levels by hand using `fct_recode`
+
+```{r}
+x <- factor(c("apple", "bear", "banana", "dear"))
+fct_recode(x, fruit = "apple", fruit = "banana")
+```
 
 ##  `fct_collapse`
 
@@ -369,11 +376,17 @@ gss18_gen <- gss18_gen |> mutate(fct_lump_relig = fct_lump(relig))
 gss18_gen |> select(generation, fct_lump_relig) |> table()
 ```
 
-We probably want to normalize this table so that the data are expressed as percentages, with the rows summing to one:
+We probably want to normalize this table so that the data are expressed as percentages, with the total summing to one:
 
 ```{r}
 gss18_gen |> select(generation, fct_lump_relig) |> table() |> prop.table()
 ```
+
+```{r}
+gss18_gen |> select(generation, fct_lump_relig) |> table() |> prop.table() |> sum()
+```
+
+Let us now transforms the row into a probability distribution where each row item represents a proportion of the total of sum 1
 
 Note that by normalizing the rows or columns, we are now studying the conditional distribution of religion given generational status (or vice versa)
 
@@ -389,13 +402,6 @@ Next we will do conditional distribution of generation; given a religion
 gss18_gen |> select(generation, fct_lump_relig) |> table() |> prop.table(2)
 ```
 
-## chi-squared test
-
-Next, let's test whether religious affiliation and generational status are statistically independent. To do this, we'll perform a chi-squared test of independence, using `chisq.test()`:
-
-```{r}
-gss18_gen |> select(generation, fct_lump_relig) |> table() |> chisq.test()
-```
 
 ## Hours of TV watched
 
@@ -405,7 +411,7 @@ gss18_gen |> ggplot(aes(x = generation, y = tvhours)) + geom_boxplot()
 This plot could maybe be improved by ordering the boxes so that the medians are in ascending order:
 
 ```{r}
-gss18_gen |> ggplot(aes(x=fct_reorder(generation, tvhours), y=tvhours)) + geom_boxplot()
+gss18_gen |> ggplot(aes(x = fct_reorder(generation, tvhours), y = tvhours)) + geom_boxplot()
 ```
 
 ## Political orientation
