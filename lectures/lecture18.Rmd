@@ -1,0 +1,416 @@
+---
+subtitle: "DATASCI 306: Lecture 18"
+title: "Linear Regression"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(learnr)
+library(tidyverse)
+```
+
+## Linear Regression
+
+After today's lecture you will understand:
+
+>* How to run linear regressions using lm()
+>* How to interprate the output of summary.lm()
+>* Some examples of how regression analysis is used on real data.
+
+These notes follow Chapters 1 and 3 of [Linear Regression Using R.](https://conservancy.umn.edu/bitstream/handle/11299/189222/LinearRegressionUsingR2ed_fulltext.pdf?sequence=12&isAllowed=y)
+
+## What is a model?
+A statistical model is a mathematical formula that relates an outcome with one or more explanatory variables.
+
+
+$$ Y = f(X) + \epsilon$$
+
+* Y - outcome
+* $f$ - model function
+* X - explainer
+* &#x3F5; - noise
+
+## Model classes
+
+The types of functions *f* that we allow determine what is called the *model class.* For example, in STATS 250 you learned about linear regression, where *f* is any function of the form
+ 
+
+$$f(x) = a_0 + a_1x$$
+
+for some parameters $a_0$ and $a_1$. This defines a whole family of models: one for each choice of slope and intercept.
+
+*Linear regression* modeling is a specific form of regression modeling that assumes that the output can be explained using a linear combination of the input values.
+
+## Model fitting
+
+The process of *fitting* a model refers to selecting the particular choice 
+ from the family of models that we have chosen, in order to best fit the data.
+ 
+The fitted model is the member of the model family we have selected that is "closest" to the data. This does not mean that this is the "true" model! In most cases there is no "true" model. 
+
+**The goal of a model is not to uncover truth, but to discover a simple approximation that is still useful.**
+
+## Model selection
+There is also the question of which family of models to use. In other words, which types of functions $f(x)$ to use. To use a fashionable example, we could have instead chosen our model family to be
+
+
+$$ {f : f\ is\ a\ neural\ network }$$
+
+The problem of choosing a model family is known as model selection. It is a much trickier problem than model fitting because there is no one correct answer: "all models are wrong"; the appropriate model family balances our needs for interpretability, predictiveness, etc.
+
+## The `lm` command
+
+This week we will focus on the linear model (the most important model in statistics). The command to fit linear models in R is `lm()`.
+
+`lm` is (an important) part of "base R". We also load the `modelr` package in order to make `lm` behave more like the tidyverse commands that we have seen all semester:
+
+```{r}
+library(modelr)
+```
+The `modelr` package comes with a simple bivariate dataset that we can model:
+
+```{r}
+sim1 |> print()
+```
+
+Let us first explore the data
+
+```{r}
+ggplot(sim1, aes(x, y)) + geom_point()
+```
+The plot suggests a strong linear relationship. We suspect that a good model might be the one we saw above:
+
+$$y = a_0 + a_1x$$
+If we select a particular $a_0$ and $a_1$, this gives us a potential model for the data. We can plot this for various choices of $a_0$ and $a_1$ and see visually see how well it might fit:
+
+```{r lm, exercise = TRUE}
+a0 = 4
+a1 = 4
+
+ggplot(sim1, aes(x, y)) +
+  geom_abline(aes(intercept = a0, slope = a1), color = "red") +
+  geom_point()
+
+# try a0 = 2 and a1 = 2.5
+```
+
+The red line represents the value of $y$ that we would predict for each value of $x$
+     
+To measure how good our model fit is we can do the following: for each pair of data points $(x_i, y_i)$, measure the distance $|\hat{y}_i - y_i|$ between the predicted and the observed values of $y_i$
+
+## Residual
+
+The value $\hat{y}_i - y_i$ is called the *residual*. It's the component of the data that isn't predicted by our model. Adding up the residuals gives us a measure of how good our model fits the data. 
+
+If we predict the data perfectly $\hat{y}_i = y_i$ for all $i$ then this would equal zero, so lower values are better.
+
+(Next week, we will see that this is only true up to a point; it is generally not a good idea to fit the data perfectly.)
+
+## Fitting a model
+
+To fit a linear model in R, we use a special formula syntax which is denoted by the `~`
+
+`lm(y ~ x, data)`
+
+says regress `data$y` on `data$x`.
+
+```{r}
+mdl <- lm(y ~ x, data = sim1) |> print()
+```
+
+This says that the best-fitting linear model has
+
+$$\hat{a}_0=4.22$$
+
+and
+
+$$\hat{a}_1=2.052$$
+
+**Why is this the best-fitting model?**
+
+
+It means that over all possible choice of $a_0$, $a_1$, the ones selected by `lm()`, which we call $\hat{a}_0$ and $\hat{a}_1$, minimize the squared error (using OLS - Ordinary Least Squares):
+
+$$\sum_i \big[ \underbrace{y_i}_{\text{observed}} - \underbrace{(\hat{a}_0 + \hat{a}_1 x_i)}_{\text{predicted}}\big]^2$$
+
+## Predictions
+
+We can use the function `add_predictions()` to add the predicted values into the original data frame:
+
+```{r}
+
+sim1 |> add_predictions(mdl) |> print()
+```
+
+## Exercise
+According to this mode, what is the predicted value of y when x = 0
+
+```{r eg1, exercise = TRUE}
+library(modelr)
+mdl <- lm(y ~ x, data = sim1)
+mdl
+```
+```{r, eg1-solution}
+mdl <- lm(y ~ x, data = sim1)
+y = 0 * 2.052 + 4.221
+y
+```
+
+## Summarizing the linear model
+
+The main tool we have to understand the output of `lm` is the `summary` function:
+
+```{r}
+summary(mdl)
+```
+In most cases, the part you are most interested in is the "Coefficients" section.
+
+**Standard errors**
+
+The standard errors, $t$-values, and $p$-values measure the degree of certainty about the estimates in the Estimate column.
+
+* The p-value, shown here as `Pr(>|t|)`, is the probability of observing this value under the null hypothesis that the true value is actually zero. We see that this is extremely unlikely: both the mean and the slope are significantly different from zero.
+* the student t-value is nothing but the estimate / std.error
+
+## Residuals
+
+The residual is the difference between the predicted and observed value:
+
+
+$$\text{resid}_i = y_i - \hat{y}_i = y_i - (a_0 + a_1 x_i).$$
+
+(linear regression minimizes the sum of squared residuals.)
+
+```{r}
+summary(mdl)
+```
+
+If the linear model is correct, we would expect residual values that are normally distributed around a mean of zero, median value near zero, minimum and maximum values of roughly the same magnitude, and first and third quartile values of roughly the same magnitude. 
+
+The Residuals section of the linear model summary shows us these statistics.
+
+## Residual distribution
+
+We expect the distribution of the residuals to be `normal`
+
+```{r}
+sim1 |> add_residuals(mdl) |> add_predictions(mdl) |> print()
+```
+
+
+```{r}
+sim1 |> add_residuals(mdl) |> ggplot() + geom_histogram(aes(x=resid))
+```
+
+If the model has done a good job of capturing patterns in the data, then the residuals should look like random noise.
+
+In other words, if the residuals contain obvious patterns, then there is more modeling work to be done! You should confirm this by visualizing the residuals.
+
+## Redisual not normal
+
+Let's see an example where the residuals look very non-normal:
+
+```{r}
+
+df <- tibble(x = rnorm(n = 100), y = x + rexp(n=100))
+fit <- lm(y ~ x, df)
+summary(fit)
+df |> add_residuals(fit) |> ggplot() + geom_histogram(aes(x=resid))
+```
+
+If you saw this in real data, it would be a signal that the simple linear model is not appropriate.
+
+## Measures of goodness-of-fit
+
+The last few lines of the summary output contain some information about the overall fit of the linear model to this data set:
+
+```{r}
+summary(mdl)
+```
+
+* Degrees of freedom (`df`) is the number of observations minus the number of estimated parameters.
+
+* SSe - The sum of squares residual is $\sum_{i=1}^{n} (\hat{y}_i - y_i)^2$
+* The residual standard error is $\sqrt{\sum_{i=1}^{n} (\hat{y}_i - y_i)^2 / \text{df}}$
+* SSy - The sum of squared differences between individual data points ($y_i$) and the mean of the response variable (y) - $\text{SSy} = \sum_{i=1}^{n} [y_i - \bar{y}]^2$
+* R-squared: `1 - SSe / SSy`
+* Adjusted R-squared takes into account the number of predictors that were used.
+* F-statistic: test of the hypothesis that all of the coefficients in the model are simultaneously zero.
+
+Remember that R-squared always goes up as you add more variables!
+
+```{r}
+sim1 %>% add_residuals(mdl) |> summarize(SSy = sum((y - mean(y))^2), SSe = sum(resid^2)) |>
+    mutate(R2 = 1 - SSe / SSy)
+```
+
+## Regression example #1 - CPU DB database
+
+The first dataset that we will use to practice regression comes from the eBook given for reading. It consists of the data on computer processors and its performance-related metrics.
+
+![](images/cpu.jpeg){#id .class width=40%}
+```{r}
+load(url('https://datasets.stats306.org/cpus.RData'))
+```
+
+**Available Dataframes**
+
+* The data frame int00.dat contains the data from the CPU DB database for all of the processors for which performance results were available for the SPEC Integer 2000 (Int2000) benchmark program.
+* fp00.dat contains the data for the processors that executed the Floating-Point 2000 (Fp2000) benchmarks
+
+We will use `int00.dat` in this lesson and now let us take a look at the first few records of this dataframe
+
+```{r}
+int00.dat |> head()
+```
+
+and so on
+
+## Investigate nperf and perf
+
+```{r}
+int00.dat$nperf |> range()
+int00.dat$perf |> range()
+```
+
+And the variables are
+
+* nperf - Normalized performance
+* perf - SPEC performance
+* clock - Clock frequency (MHz)
+* threads - Number of hardware threads available
+* cores - Number of hardware cores available
+* TDP - Thermal design power
+* transistors - Number of transistors on the chip (M)
+* dieSize - The size of the chip
+* voltage - Nominal operating voltage
+* featureSize - Fabrication feature size
+* channel - Fabrication channel size
+* FO4delay - Fan-out-four delay
+* L1icache - Level 1 instruction cache size
+* L1dcache - Level 1 data cache size
+* L2cache - Level 2 cache size
+* L3cache - Level 3 cache size
+
+## perf vs clock
+
+Let us do some EDA
+
+perf measure performance and clock measures clock speed. Are they linearly related?
+
+```{r}
+ggplot(int00.dat) + geom_point(aes(x = clock, y = perf))
+```
+Let's consider the simple model
+
+$$\text{perf} = a_0 + a_1 \cdot \text{clock}$$
+
+To find the best-fitting $a_0$, and $a_1$, regress `perf` on `clock` using `lm()`.
+
+```{r}
+int00.lm <- lm(perf ~ clock, data = int00.dat)
+int00.lm
+```
+We can use geom_smooth() to plot the regression line atop the data:
+
+```{r}
+ggplot(int00.dat, aes(x = clock, y = perf)) + geom_point() + geom_smooth(method = "lm")
+```
+## Summary
+
+Now let's summarize the regression:
+
+```{r}
+summary(int00.lm)
+```
+
+**Model fit**
+
+* The residual standard error is high (about 400) relative to the scale of perf
+* $R$-squared is .65, which is neither high nor low.
+
+
+Next, let's visualize the residuals:
+
+```{r}
+int00.dat |> add_residuals(int00.lm) |> ggplot() +
+  geom_histogram(aes(x=resid))
+```
+
+As you could probably already guess from looking at the plot of `perf` vs. `clock`, the residuals do not appear to be normally distributed.
+
+## Residual vs fitted
+
+Next let's consider a plot of the residuals versus the fitted values:
+
+```{r}
+int00.dat |> add_residuals(int00.lm) |> add_predictions(int00.lm) |>
+    ggplot() + geom_point(aes(x = resid, y = pred))
+```
+
+The linear model says that, after accounting for the predictors, the remaining variation should look like pure noise. So:
+
+* If the linear model is correct, then there should be no discernible relationship between the predictors and the residuals.
+(The fitted values are linear functions of the predictors.)
+* If there are obvious patterns, then the model is probably not correct.
+
+But, here we see that:
+
+* The residuals have increasing variance for larger values of clock.
+* There are several "clusters" of residuals.
+
+**It is likely that clock alone is not sufficient to fully explain the outcome variable.**
+
+## Explore more
+
+What explains the weird patterns we're seeing in the data and residuals? Hint:
+
+```{r}
+int00.dat |>
+    ggplot(
+        aes(x = clock, y = perf, color = factor(cores))
+    ) + geom_point()
+```
+
+Next lecture we'll talk about multiple linear regression, which let's us take into account multiple predictors at a time.
+     
+## Regression example #2: Modeling the price of diamonds
+
+Next we will use linear regression to study the relationship between the price and weight of diamonds.
+
+```{r}
+diamonds |> print()
+dm.lm1 <- lm(price ~ carat, data = diamonds)
+summary(dm.lm1)
+```
+
+Some EDA
+
+```{r}
+ggplot(diamonds, aes(x = carat, y = price)) + geom_point() + geom_smooth()
+```
+
+## Feature engineering
+Sometimes, a linear relationship emerges if we first transform the data in a certain way. Let's see what happens if we consider $log(price)$ vs $log(carat)$
+
+```{r}
+ggplot(diamonds, aes(x = log(carat), y = log(price))) + geom_point() + geom_smooth()
+```
+```{r}
+dm.lm <- lm(log(price) ~ log(carat), data = diamonds)
+summary(dm.lm)
+```
+
+How does the residuals look now?
+
+```{r}
+diamonds %>% add_residuals(dm.lm) |> ggplot() +
+  geom_histogram(aes(x=resid))
+```
+
+
