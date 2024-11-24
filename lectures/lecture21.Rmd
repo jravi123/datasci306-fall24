@@ -1,0 +1,106 @@
+---
+subtitle: "DATASCI 306: Lecture 22"
+title: "Shiny apps"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(learnr)     # For interactive exercises
+library(tidyverse)
+library(shiny)
+```
+
+
+## What is shiny?
+
+* Shiny is an R package to create interactive web applications (apps)
+* Not need to know HTML, CSS, or JavaScript. 
+* Can create interactive analytics dashboards  
+
+[Get inspired by award winning dashboards!](https://medium.com/make-your-data-speak/myds-award-2023-oh-dashboards-my-dashboards-8c978fa2a468)
+
+## Main building blocks of shiny
+
+* UI - user interface that defines how your app looks
+* Server function -  that defines how your app works
+
+Shiny uses reactive programming to automatically update outputs when inputs change, so we’ll need the third important component of Shiny apps: **reactive expressions**. 
+
+## Hello World app
+
+There are several ways to create a Shiny app. 
+* The simplest is to create a new directory for your app, and put a single file called app.R in it. This app.R file will be used to tell Shiny both how your app should look, and how it should behave. Try it out by adding an app.R file that looks like this:
+
+```{r, eval=FALSE, echo=TRUE}
+ui <- fluidPage(
+  "Hello, world!"
+)
+
+server <- function(input, output, session) {
+}
+
+shinyApp(ui, server)
+```
+
+This is a complete, if trivial, Shiny app! Looking closely at the code above, our app.R does four things:
+
+
+- It defines the user interface, the HTML webpage that humans interact with. In this case, it’s a page containing the words “Hello, world!”.
+
+- It specifies the behavior of our app by defining a server function. It’s currently empty, so our app doesn’t do anything, but we’ll be back to revisit this shortly.
+
+- It executes `shinyApp(ui, server)` to construct and start a Shiny application from UI and server.
+
+## Running
+
+There are a few ways you can run this app:
+
+- Click the Run App button in the document toolbar.
+
+- Use a keyboard shortcut: Cmd/Ctrl + Shift + Enter
+
+
+## Tutorial
+
+Now let us run through some examples from this eBook:
+
+https://mastering-shiny.org/basic-app.html
+
+## Shiny cheatsheet
+
+https://rstudio.github.io/cheatsheets/html/shiny.html
+
+## Setting working directory
+
+By default, the console tab opens the `/cloud/project/` folder.
+
+You can check it by running the `getwd()` command
+
+To change the working directory to some other directory use `setwd('directory_path')`
+
+For example to change to `shiny-project-er-injuries` folder you would key in
+
+`setwd('./shiny-project-er-injuries')` using relative path
+
+or
+
+`setwd('/cloud/project/shiny-project-er-injuries')` using absolute path
+
+## Example 1
+
+Let us now understand the ncaa project. The code is part of this repository under 
+
+project/shiny-project-ncaa
+
+
+
+## Example 2
+
+project/shiny-project-er-inuries
+
+

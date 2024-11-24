@@ -1,0 +1,466 @@
+---
+subtitle: "DATASCI 306: Lecture 20"
+title: "Multiple Regression"
+output: 
+  learnr::tutorial:
+    progressive: true
+    css: css/lecture.css
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(learnr)
+library(tidyverse)
+library(modelr)
+load(url('https://datasets.stats306.org/cpus.RData'))
+```
+
+## Multiple Regressors
+
+After today's lecture you will understand:
+
+* The role of categorical predictors in regression.
+* How to fit multiple linear regressions using lm()
+* How to interpret the multilinear model and summary.lm()
+* Examples of using multiple regression on real data.
+
+These notes follow Chapters 1, 3 and 4 of [Linear Regression Using R.](https://conservancy.umn.edu/bitstream/handle/11299/189222/LinearRegressionUsingR2ed_fulltext.pdf?sequence=12&isAllowed=y)
+
+## Recap
+
+In the last lecture we saw `sim1` data that had:
+
+* only one continuous predictor x 
+* a continuous outcome y
+
+```{r}
+sim1 |> print()
+```
+
+## Dealing with Categorical Variable
+
+Today we'll start with sim2, which is similar, except that x is now a categorical variable:
+
+```{r}
+sim2 |> print()
+```
+
+A simple EDA
+
+```{r}
+ggplot(sim2) + geom_boxplot(aes(x = x, y = y))
+```
+
+## Categorical values for regression
+
+What happens if we regress `y` on `x`?
+
+```{r}
+mdl <- lm(y ~ x, sim2) 
+summary(mdl)
+```
+
+Regressing `y` on `x` has led R to create three new predictors. In fact, it has estimated the model
+
+$$y = a_0 + a_1\{x=b\} + a_2\{x=c\} + a_3\{x=d\}.$$
+
+Each of the terms in brackets, e.g. ${x=b}$, is equal to 1 if the corresponding observation has x=b. Otherwise, it equals zero.
+
+In fact, we can use a command called model_matrix() to show the actual predictors that R has used when performing this regression:
+
+```{r}
+sim2 %>% model_matrix(y ~ x) %>% head()
+```
+
+## Coefficients
+
+How do we interpret the coefficients?
+
+$$y = a_0 + a_1\{x=b\} + a_2\{x=c\} + a_3\{x=d\}$$
+
+When x=a, each of $\{x=b\} = \{x=c\} = \{x=d\} = 0$. Therefore, the regression model for the subset observations that have `x=a` is just:
+
+$$y = a_0.$$
+
+## Exercise
+What exactly is the value $a_0$?
+
+```{r a0, exercise = TRUE}
+
+```
+
+```{r a0-solution}
+sim2 %>% filter( x == 'a') %>% summarize(a0 = mean(y, na.rm = T))
+```
+
+## What about the other coefficients?
+
+The other coefficients are interpreted similarly. For example, the mean of all the observations with x=b is $\hat{a}_0 + \hat{a}_1$, because the regression model for these observations is:
+
+```{r}
+# mean of x=b group
+sim2 %>% filter(x == 'b') %>% summarize(a = mean(y)) - 1.152166
+```
+
+## Multiple linear regression
+
+The previous example is an instance of *multiple linear regression.*
+
+Multiple linear regression is a generalization of the simple linear regression model discussed in the last class. Now we assume that each observation $y$ is a linear combination of several predictors $x_1, \dots, x_k$
+
+$$y = a_0 + a_1x_1 + a_2x_2 + ...a_kx_k + \text{noise}.$$
+
+Just like with simple linear regression, we want to find the best coefficients $a_0,\dots,a_k$
+for this model
+
+```{r}
+ggplot(int00.dat, aes(x = clock, y = perf)) + geom_point() + geom_smooth(method = "lm")
+```
+By examining various regression diagnostics, such as the residuals, we argued that the simple linear model `perf ~ clock` was not rich enough to accurately explain all of the variation in `perf`.
+
+Now, we will use multiple linear regression to add more predictors and improve the fit.
+
+## Adding a categorical predictor
+
+As a first step, let's try adding the categorical variable `cores` into our regression model. Recall that cores tells us how many cores each chip in the dataset has, and appears to explain some of the variation in performance, particularly at higher `clock` speeds:
+
+```{r}
+ggplot(int00.dat) + geom_point(aes(x = clock, y = perf, color = factor(cores)))
+```
+Let's try adding `cores` into the linear regression. For the moment, we will consider cores as categorical, similar to how we treated `x` in the preceding example:
+
+```{r}
+mdl <- lm(perf ~ clock + factor(cores), int00.dat)
+summary(mdl)
+```
+
+## Interpretation multilinear model
+
+Many aspects of the preceding display (residuals, $R^2$
+, degrees of freedom, etc.) are analogous to the case of a single predictor. The main difference is that there are now more rows in the Coefficients column:
+
+```{r}
+summary(mdl)
+```
+How do we interpret this printout? First we will give a graphical interpretation, followed by a mathematical one.
+
+**Graphical explanation**
+
+Let's add the predicted values and then plot:
+
+```{r}
+int00.dat %>% add_predictions(mdl) %>% ggplot(aes(x = clock, color = factor(cores))) +
+    geom_point(aes(y = perf)) + geom_line(aes(y = pred))
+```
+**Mathematical explanation**
+Here we can see what the linear model did: it fit three lines with different $y$
+-intercepts for each of the three groups of `cores`.
+
+$$\begin{align}
+\text{perf} &= a_0 + a_1 \cdot \text{clock} & (\text{cores}=1) \\
+\text{perf} &= (a_0 + a_2) + a_1 \cdot \text{clock}  & (\text{cores}=2) \\
+\text{perf} &= (a_0 + a_3) + a_1 \cdot \text{clock}  & (\text{cores}=4) \\
+\end{align}$$
+
+
+## Cores as a continuous variable
+
+Now let's see what happens if we treat `cores` as a continuous variable in the regression:
+
+```{r}
+
+mdl <- lm(perf ~ clock + cores, data = int00.dat)
+summary(mdl)
+```
+The interpretation of this model is different: it says that increasing cores by one increases the average performance by $+431$
+. This is slightly different than the previous model, where the predicted mean from `cores=1 to cores=2 and cores=2 to cores=4` jumped non-linearly.
+
+```{r}
+int00.dat %>% add_predictions(mdl) %>% ggplot(aes(x = clock, color = factor(cores))) + 
+    geom_point(aes(y = perf)) + geom_line(aes(y = pred))
+```
+
+## Exercise
+What is the predicted value of `perf` when `clock=1000` and `cores=4`?
+
+```{r eg2, exercise = TRUE}
+lm(formula = perf ~ clock + cores, data = int00.dat)
+```
+
+```{r eg2-solution}
+lm(perf ~ clock + cores, data = int00.dat) %>% 
+    add_predictions(tibble(clock = 1000, cores = 4), .)
+```
+
+
+## Identifying Predictors
+
+Now we have the ability to add multiple, and potentially very many, predictors into our model. How should we go about this?
+
+Unfortunately, there is no single best answer to this question! It depends on your goals, as well as the data you have. Some general rules of thumb are:
+
+* Smaller models are more interpretable. If your goal is to understand the process(es) that generated your data, then you should try to find the smallest possible model that has good explaining power.
+* If your goal is predictive accuracy, then you will generally want to use a lot of predictors:
+  * Including possibly making up additional ones!
+  * Too much of this can lead to a phenomenon called overfitting. Overfitted models work well with the training dataset but perform poorly with new data
+* To the extent possible, try to use intuition, exploratory data analysis, and/or domain knowledge as a guide. Don't just rely on algorithms to make these decisions for you!
+
+## Example with int00 data
+
+```{r}
+int00.dat |> print()
+```
+
+## Start with everything!
+
+```{r}
+lm(perf ~ ., int00.dat) %>% summary
+```
+We get a garbage answer because several of the predictors are missing for almost every observation:
+
+```{r}
+summary(int00.dat)
+```
+
+```{r}
+int00.dat %>% nrow
+```
+## Apply domain knowledge
+
+Here is the potential list of predictors we start with:
+
+* clock
+* threads
+* cores
+* transistors
+* dieSize
+* voltage
+* featureSize
+* channel
+* FO4delay
+* L1icache
+* $\sqrt{L1icache}$
+* L1dcache
+* $\sqrt{L1dcache}$
+* L2cache
+* $\sqrt{L2cache}$
+
+This initial list has been guided by domain knowledge:
+
+* TDP (Thermal Design Power) is not important
+* Cache miss rates are proportional to the square root of the cache size
+
+Cache Reference: https://en.wikipedia.org/wiki/CPU_cache
+
+
+
+## Stepwise regression
+
+Let's try the following strategy to remove some of the variables, while still retaining a model that has good explaining power:
+
+Start with predictors picked based on domain knowledge and then iteratively:
+
+* Drop any predictors with an insignificant p-value
+* Repeat until all the predictors are significant.
+
+```{r}
+
+int00.lm.full <- lm(nperf ~ clock + threads + cores +
+transistors + dieSize + voltage + featureSize + channel +
+FO4delay + L1icache + sqrt(L1icache) + L1dcache +
+sqrt(L1dcache) + L2cache + sqrt(L2cache), data=int00.dat)
+
+summary(int00.lm.full)
+```
+
+```{r}
+
+# degree of freedom
+missing = 179
+df = nrow(int00.dat) - missing - 16
+df
+```
+
+## Drop candidate
+
+`FO4delay       -1.765e-02  1.600e+00  -0.011  0.99123  `
+
+p-value = 0.99123 which is > 0.05
+
+Let us now update our model by removing this predictor using the update function
+
+```{r}
+int00.lm.2 <- update(int00.lm.full, .~. - FO4delay, data = int00.dat)
+summary(int00.lm.2)
+```
+Similarly drop featureSize, transistors, dieSize.
+
+Along the way notice that
+
+* the missingness value improves as lesser and lesser number of observations are dropped along the way (the features contributing to missingness are eliminated one-by-one)
+* degree of freedom increases accordingly as well
+
+
+
+## Scenario of what could go wrong?
+
+Let us look into another dataset `int92.dat`. This contains the data from the CPU DB database for all of the processors for which performance results were available for the SPEC Integer 1992 (Int1992) benchmark program.
+
+```{r}
+
+int92.lm.full <- lm(nperf ~ clock + threads + cores +
+transistors + dieSize + voltage + featureSize + channel +
+FO4delay + L1icache + sqrt(L1icache) + L1dcache +
+sqrt(L1dcache) + L2cache + sqrt(L2cache), data=int92.dat)
+
+summary(int92.lm.full)
+```
+
+Hmm...let us figure out how many observations we have
+
+```{r}
+nrow(int92.dat)
+```
+
+Let us take a look at the clock values
+
+```{r}
+int92.dat$clock |> table()
+```
+
+And now the thread column values
+
+```{r}
+int92.dat %>% count(threads)
+```
+
+## Exercise
+Is considering `cores` as a predictor is a good idea?
+
+```{r eg3, exercise = TRUE}
+
+```
+
+
+
+## Classification and logistic regression
+In regression, we have a continuous outcome (height, population growth, etc.), and some predictors which could be either categorical or continuous. We built a function that predicts the mean of the outcome given the predictors, e.g.
+
+$$\mathbb{E}(y \mid x) = a_0 + a_1 x.$$
+
+For example, we fit the following model:
+
+```{r}
+lm(log(price) ~ log(carat), diamonds) %>% summary
+```
+
+This says that the average value of log(price) given log(carat) is
+
+$$8.449 + 1.676 \cdot \log(\text{carat})\quad\text{(avg. value of log(price))}$$
+we are going to look at a different kind of regression model, with the main difference being that our outcome is no longer a continuous variable like price or log(price). Instead, the outcome is a True/False variable which indicates whether or not some event happened
+
+## Deaths on the RMS Titanic
+The [RMS](https://en.wikipedia.org/wiki/Titanic) Titanic famously sank on April 15, 1912 during its maiden voyage, killing about 2/3rds of its passengers. The titanic data set records the fates of everyone aboard.
+
+```{r}
+data(Titanic)
+titanic_df <- Titanic %>% as_tibble %>% mutate(Survived = Survived == "Yes") 
+titanic_df |> head()
+```
+The last 'n' column provides the total number of records with the same rest of the column values. So let us replicate the rows to match the 'n' value as given below:
+
+```{r}
+
+titanic_df <- titanic_df[rep(row.names(titanic_df), titanic_df$n), -5]
+titanic_df %>% print
+```
+
+
+Now let us do some EDA
+
+```{r}
+
+ggplot(titanic_df) + geom_bar(aes(x = interaction(Class, Sex, Age), fill = Survived), 
+                              position = 'dodge') + coord_flip()
+```
+We have three categorical predictors: sex, age (adult / child), and class (1st-3rd or crew). Our outcome is also categorical: survived or not.
+
+## Logistic regression
+
+Suppose we want to build a regression model for predicting categorical outcomes. In all of the regressions we have seen so far, the dependent ($y$
+) variable has been continuous: population growth, life expectancy, price, etc. However, there are many situations where the outcome is categorical. For simplicity, we will assume it's binary, and can be coded as 0/1. How should we model binary data?
+
+One idea is to just stick what we know and use the linear model. Will this work?
+
+```{r}
+
+mdl <- lm(Survived ~ Class + Sex + Age, data = titanic_df)
+summary(mdl)
+```
+R did not generate any errors. But the regression looks "weird" in many ways:
+
+* The $R$-squared low.
+* The residual standard error is large relative to the outcome (which is always either zero or one).
+* The residuals look weird:
+
+```{r}
+
+titanic_df %>% add_residuals(mdl) %>% mutate(resid=as.numeric(resid)) %>% 
+    ggplot + geom_histogram(aes(x=resid), binwidth=.1)
+```
+
+## What about predictions?
+
+The predicted outcomes are decimal numbers, whereas in the original model, the outcome was `TRUE` or `FALSE`.
+
+```{r}
+
+titanic_df %>% add_predictions(mdl) %>% distinct %>% head
+```
+The linear model says:
+$$y = f(a + b x)$$
+
+For $f(x)=x$ For 0/1 outcomes, let's instead try to think probabilistically:
+
+$$\text{Prob}(y=1) = \underbrace{f(a + b x)}_{(\text{some function of the covariates})}$$
+
+What criteria should this function $f$ 
+ have?
+ 
+* It's range needs to be $[0, 1]$
+.
+For "extreme" values of $a + bx$
+ it should tend to zero or one.
+ 
+ A function which satisfies both the properties is the `logistic function`:
+ 
+ $$f(x) = \frac{1}{1 + e^{-x}}.$$
+ 
+ 
+ ```{r}
+ 
+expand.grid(x = seq(-5, 5, .1)) %>% ggplot(aes(x = x)) + 
+    stat_function(fun = function(x) (1 / (1 + exp(-x))), xlim = c(-5, 5), color = "blue") +
+    stat_function(fun = function(x) 1/2 + x/5, xlim = c(-5, 5), color = "red") +
+    annotate(x = 3.5, y = 1.5, geom = "text", label = "linear model", color = "red") +
+    annotate(x = 4.0, y = .85, geom = "text", label = "logistic model", color = "blue") + 
+    ylab("outcome")
+```
+
+## glm
+
+To fit this model in R, we use a similar command as for linear regression: glm(). (The "g" stands for generalized linear model.) We'll start as we did with linear regression, using a single predictor:
+
+```{r}
+mdl <- glm(Survived ~ Sex, data = titanic_df, family = "binomial")
+#                                             ^^^^^^ important
+mdl
+```
+
+## Next class
+
+More on logistic regression
+
+
+

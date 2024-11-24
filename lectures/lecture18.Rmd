@@ -19,7 +19,7 @@ library(tidyverse)
 After today's lecture you will understand:
 
 >* How to run linear regressions using lm()
->* How to interprate the output of summary.lm()
+>* How to interpret the output of summary.lm()
 >* Some examples of how regression analysis is used on real data.
 
 These notes follow Chapters 1 and 3 of [Linear Regression Using R.](https://conservancy.umn.edu/bitstream/handle/11299/189222/LinearRegressionUsingR2ed_fulltext.pdf?sequence=12&isAllowed=y)
