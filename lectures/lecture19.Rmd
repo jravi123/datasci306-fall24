@@ -326,7 +326,7 @@ nrow(int92.dat)
 Let us take a look at the clock values
 
 ```{r}
-int92.dat$clock |> table()
+int92.dat |> count(clock)
 ```
 
 And now the thread column values
@@ -339,7 +339,7 @@ int92.dat %>% count(threads)
 Is considering `cores` as a predictor is a good idea?
 
 ```{r eg3, exercise = TRUE}
-
+load(url('https://datasets.stats306.org/cpus.RData'))
 ```
 
 
@@ -352,7 +352,7 @@ $$\mathbb{E}(y \mid x) = a_0 + a_1 x.$$
 For example, we fit the following model:
 
 ```{r}
-lm(log(price) ~ log(carat), diamonds) %>% summary
+lm(log(price) ~ log(carat), diamonds) |> summary()
 ```
 
 This says that the average value of log(price) given log(carat) is
@@ -381,8 +381,10 @@ Now let us do some EDA
 
 ```{r}
 
-ggplot(titanic_df) + geom_bar(aes(x = interaction(Class, Sex, Age), fill = Survived), 
-                              position = 'dodge') + coord_flip()
+ggplot(titanic_df) + geom_bar(
+  aes(x = interaction(Class, Sex, Age), 
+      fill = Survived), 
+  position = 'dodge') + coord_flip()
 ```
 We have three categorical predictors: sex, age (adult / child), and class (1st-3rd or crew). Our outcome is also categorical: survived or not.
 
@@ -395,7 +397,8 @@ One idea is to just stick what we know and use the linear model. Will this work?
 
 ```{r}
 
-mdl <- lm(Survived ~ Class + Sex + Age, data = titanic_df)
+mdl <- lm(Survived ~ Class + Sex + Age, 
+          data = titanic_df)
 summary(mdl)
 ```
 R did not generate any errors. But the regression looks "weird" in many ways:
@@ -406,7 +409,7 @@ R did not generate any errors. But the regression looks "weird" in many ways:
 
 ```{r}
 
-titanic_df %>% add_residuals(mdl) %>% mutate(resid=as.numeric(resid)) %>% 
+titanic_df %>% add_residuals(mdl) |> mutate(resid=as.numeric(resid)) |>
     ggplot + geom_histogram(aes(x=resid), binwidth=.1)
 ```
 
@@ -438,7 +441,7 @@ For "extreme" values of $a + bx$
  $$f(x) = \frac{1}{1 + e^{-x}}.$$
  
  
- ```{r}
+```{r}
  
 expand.grid(x = seq(-5, 5, .1)) %>% ggplot(aes(x = x)) + 
     stat_function(fun = function(x) (1 / (1 + exp(-x))), xlim = c(-5, 5), color = "blue") +
