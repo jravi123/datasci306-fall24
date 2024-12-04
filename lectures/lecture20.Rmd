@@ -1,5 +1,5 @@
 ---
-subtitle: "DATASCI 306: Lecture 21"
+subtitle: "DATASCI 306: Lecture 20"
 title: "Logistic Regression"
 output: 
   learnr::tutorial:
@@ -42,6 +42,18 @@ mdl <- glm(Survived ~ Sex, data = titanic_df, family = "binomial")
 mdl
 ```
 
+## Predictions
+
+```{r}
+titanic_df |> add_predictions(mdl) 
+```
+
+
+What is the mean value of male and female passengers?
+
+```{r}
+titanic_df |> add_predictions(mdl)  |> group_by(Sex) |> summarize(mean = mean(pred))
+```
 ## log-odds
 
 Although these results look similar to linear regression, their interpretation is quite different. Specifically, they are interpreted in terms of their effect on the *log-odds* ratio.
@@ -120,17 +132,7 @@ Now our regression model is
 
 $$\log \left( \frac{p}{1-p} \right) = a_0 + a_1 \cdot \text{Age}.$$
 
-## Exercise
 
-According to the model, what is the predicted probability that an 80-year-old senior survived the sinking of the Titanic?
-
-```{r}
-summary(mdl)
-```
-
-```{r eg1, exercise = TRUE}
-
-```
 
 ## Logistic regression with multiple predictors
 Just like with linear regression, multiple predictors can be added to logistic regression. The predicted log-odds become a multilinear function of the predictors:
@@ -189,6 +191,9 @@ titanic_pred <- titanic_df %>%
     print
 ```
 
+Note: adding `type = 'response'` computes the probability instead of the log-odds ratio
+
+
 Let us add a categorical output column:
 
 ```{r}
@@ -225,7 +230,7 @@ In other words, there is a tradeoff between having a good (i.e. close to zero) f
 
 ## Building a good model
 
-Last lecture, we saw how to create large, rich regression models by including more and more predictors in our regression. But we also saw that this could actually decrease predictive accuracy when analyzing data that the model had never seen before.
+In a earlier lecture, we saw how to create large, rich regression models by including more and more predictors in our regression. But we also saw that this could actually decrease predictive accuracy when analyzing data that the model had never seen before.
 
 Now, we will learn ways to systematically build a good model by dividing our data and using out-of-sample predictive performance to guide model selection.
 

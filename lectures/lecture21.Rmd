@@ -1,5 +1,5 @@
 ---
-subtitle: "DATASCI 306: Lecture 22"
+subtitle: "DATASCI 306: Lecture 21"
 title: "Shiny apps"
 output: 
   learnr::tutorial:
